@@ -4,8 +4,10 @@ import UIKit
 class NestedChildCollectionView: UICollectionView, UIGestureRecognizerDelegate {
     
     /// 允许同时识别多个手势
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
-                          shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
         return true
     }
 }
@@ -80,7 +82,7 @@ class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
 // MARK: - UICollectionViewDataSource
 extension WorksFlowViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 30 // Mock 30 个作品
+        return 100 // Mock 30 个作品
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {

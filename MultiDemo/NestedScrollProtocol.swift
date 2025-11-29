@@ -34,8 +34,8 @@ class NestedScrollManager: NSObject {
             guard oldValue !== currentChild else { return }
             
             // 重置旧的子视图
-            oldValue?.canChildScroll = false
-            oldValue?.childScrollView.contentOffset = .zero
+//            oldValue?.canChildScroll = false
+//            oldValue?.childScrollView.contentOffset = .zero
             
             // 检查是否需要允许新子视图滚动
             if let parent = parentController {
