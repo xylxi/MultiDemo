@@ -1,121 +1,131 @@
 # ProfileDemo - iOS 多级分类吸顶个人页面
 
+## 最低支持版本
+
+**iOS 13.0+**
+
 ## 项目结构
 
 ```
 ProfileDemo/
 ├── AppDelegate.swift                 # App 入口
 ├── NestedScrollProtocol.swift       # 嵌套滚动协议与管理器
+├── CategoryPageProtocol.swift       # 分类页面协议与懒加载管理器
 ├── MenuView.swift                   # 分类菜单视图组件
+├── PageContainerViewController.swift # 分页容器（支持懒加载）
 ├── WorksFlowViewController.swift    # 作品流展示（叶子节点）
-├── PageContainerViewController.swift # 分页容器（水平切换）
-├── CategoryContainerViewController.swift # 分类容器（菜单+分页）
 ├── ProfileHeaderView.swift          # 用户信息头部视图
 ├── ProfileHeaderBar.swift           # 顶部导航栏
-└── ProfileViewController.swift      # 主控制器
+├── ProfileViewController.swift      # 主容器页面
+├── AppearanceViewController.swift   # 出境模块（开发者 A）
+└── CreationViewController.swift     # 创作模块（开发者 B）
 ```
 
-## 层级结构
+## 架构设计
+
+### 容器化设计
+
+个人页面采用容器化架构，支持多人协作开发：
 
 ```
-ProfileViewController
-├── HeaderBar (固定在顶部)
-├── MainScrollView (外层滚动)
-│   ├── ProfileHeaderView (用户信息，30%区域)
-│   ├── StickyMenuView (一级分类菜单：出境、创作)
-│   └── CategoryContainerViewController (一级分类容器)
-│       └── PageContainerViewController
-│           ├── [出境] CategoryContainerViewController
-│           │   ├── MenuView (作品、喜欢、点赞)
-│           │   └── PageContainerViewController
-│           │       ├── WorksFlowViewController (作品)
-│           │       ├── WorksFlowViewController (喜欢)
-│           │       └── WorksFlowViewController (点赞)
-│           └── [创作] CategoryContainerViewController
-│               ├── MenuView (发布、资产、喜欢)
-│               └── PageContainerViewController
-│                   ├── WorksFlowViewController (发布)
-│                   ├── [资产] CategoryContainerViewController
-│                   │   ├── MenuView (全部、图片、视频、收藏)
-│                   │   └── PageContainerViewController
-│                   │       ├── WorksFlowViewController (全部)
-│                   │       ├── WorksFlowViewController (图片)
-│                   │       ├── WorksFlowViewController (视频)
-│                   │       └── WorksFlowViewController (收藏)
-│                   └── WorksFlowViewController (喜欢)
+ProfileViewController (容器)
+├── HeaderBar
+├── ProfileHeaderView (用户信息)
+├── StickyMenuView (一级分类菜单)
+└── PageContainerViewController (懒加载容器)
+    ├── AppearanceViewController (出境模块 - 开发者 A)
+    │   ├── MenuView
+    │   └── PageContainerViewController
+    │       ├── WorksFlowViewController (作品)
+    │       ├── WorksFlowViewController (喜欢)
+    │       └── WorksFlowViewController (点赞)
+    └── CreationViewController (创作模块 - 开发者 B)
+        ├── MenuView
+        └── PageContainerViewController
+            ├── WorksFlowViewController (发布)
+            ├── AssetsViewController (资产 - 三级分类)
+            │   ├── MenuView
+            │   └── PageContainerViewController
+            │       ├── WorksFlowViewController (全部)
+            │       ├── WorksFlowViewController (图片)
+            │       ├── WorksFlowViewController (视频)
+            │       └── WorksFlowViewController (收藏)
+            └── WorksFlowViewController (喜欢)
+```
+
+### 懒加载机制
+
+1. **一级分类懒加载**：只有当用户滑动或点击到对应分类时，才创建 `AppearanceViewController` 或 `CreationViewController`
+2. **二级/三级分类懒加载**：每个模块内部的子分类也是懒加载的
+3. **日志输出**：每个 ViewController 创建时会打印日志，方便验证懒加载
+
+### 分类页面协议
+
+每个分类模块需要实现 `CategoryPageProtocol`：
+
+```swift
+protocol CategoryPageProtocol: UIViewController {
+    static var categoryTitle: String { get }
+    func getCurrentScrollChild() -> NestedScrollChildProtocol?
+}
+```
+
+### 添加新分类模块
+
+```swift
+// 1. 创建新模块 ViewController
+class NewModuleViewController: UIViewController, CategoryPageProtocol {
+    static var categoryTitle: String { "新模块" }
+    
+    func getCurrentScrollChild() -> NestedScrollChildProtocol? {
+        // 返回当前可滚动的子视图
+    }
+}
+
+// 2. 在 ProfileViewController 中注册
+let configs: [CategoryPageConfig] = [
+    CategoryPageConfig(title: "出境") { ... },
+    CategoryPageConfig(title: "创作") { ... },
+    // 添加新模块
+    CategoryPageConfig(title: "新模块") { [weak self] in
+        let vc = NewModuleViewController()
+        vc.setScrollManager(self?.scrollManager)
+        return vc
+    }
+]
 ```
 
 ## 核心功能
 
-### 1. 嵌套滚动 (NestedScrollProtocol)
-- `NestedScrollParentProtocol`: 父视图滚动协议
-- `NestedScrollChildProtocol`: 子视图滚动协议  
-- `NestedScrollManager`: 统一管理父子滚动状态
+### 1. 嵌套滚动
+
+- `NestedParentScrollView`: 支持排除特定视图的手势同时识别
+- `NestedScrollManager`: 管理父子视图的滚动状态切换
 
 ### 2. 吸顶效果
+
 - 滚动时用户信息区域逐渐隐藏
 - 一级分类菜单悬停在 HeaderBar 底部
-- HeaderBar 背景随滚动渐变显示
 
-### 3. 多级分类切换
-- 支持无限级分类嵌套
-- 每级分类都有独立的菜单和分页容器
-- 左右滑动或点击菜单切换分类
+### 3. 手势冲突处理
 
-### 4. 作品流展示
-- 一行三个 Cell 的网格布局
-- 使用不同颜色区分不同分类
-- 显示完整的分类路径
+- 垂直滚动时不触发水平分页
+- 水平滑动时不触发垂直滚动
 
-## 使用方法
+## 多人协作
 
-### Xcode 项目集成
+| 模块 | 负责人 | 文件 |
+|------|--------|------|
+| 容器页面 | 主开发 | ProfileViewController.swift |
+| 出境模块 | 开发者 A | AppearanceViewController.swift |
+| 创作模块 | 开发者 B | CreationViewController.swift |
+| 公共组件 | 主开发 | MenuView, PageContainer, WorksFlow 等 |
 
-1. 创建新的 iOS 项目 (App)
-2. 删除默认的 ViewController.swift 和 Main.storyboard
-3. 将所有 .swift 文件拖入项目
-4. 在 Info.plist 中删除 `UIMainStoryboardFile` 和 `UISceneStoryboardFile` 键
-5. 运行项目
+## 验证懒加载
 
-### 配置分类数据
+运行应用后，观察控制台日志：
 
-在 `ProfileViewController.swift` 中修改 `categories` 数组：
-
-```swift
-private lazy var categories: [CategoryItem] = {
-    return [
-        CategoryItem(
-            title: "分类名称",
-            color: .systemBlue,
-            subCategories: [
-                CategoryItem(title: "子分类1", color: .systemRed),
-                CategoryItem(title: "子分类2", color: .systemGreen)
-            ]
-        )
-    ]
-}()
-```
-
-## 关键实现细节
-
-### 滚动同步机制
-
-```
-1. 外层 ScrollView 滚动时：
-   - 未到达吸顶点：正常滚动
-   - 到达吸顶点：锁定位置，允许子视图滚动
-
-2. 内层 CollectionView 滚动时：
-   - offset > 0：正常滚动
-   - offset <= 0：锁定位置，允许父视图滚动
-```
-
-### 分类切换时的滚动状态重置
-
-切换分类时，`NestedScrollManager` 会自动更新当前激活的子视图引用，确保滚动状态正确同步。
-
-## 注意事项
-
-1. 确保 iOS 15.0+ 部署目标
-2. 作品流数据为 Mock 数据，实际使用时需替换为真实数据源
-3. 可根据需要调整 HeaderBar 高度、菜单高度等常量
+1. 启动时只会看到 `ProfileViewController` 相关日志
+2. 首次显示时创建第一个分类页面（出境）
+3. 滑动到"创作"时才创建 `CreationViewController`
+4. 在"创作"中滑动到"资产"时才创建 `AssetsViewController`

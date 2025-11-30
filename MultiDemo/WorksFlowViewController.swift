@@ -45,6 +45,8 @@ class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        
+        print("[WorksFlowViewController] viewDidLoad - \(categoryPath)")
     }
     
     private func setupUI() {
