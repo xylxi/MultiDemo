@@ -10,10 +10,11 @@ protocol AssetFlowContainerDelegate: AnyObject {
 
 // MARK: - 资产流容器视图
 /// 包含菜单和分页容器的完整资产流区域
+/// 
+/// 解耦设计：不依赖 NestedScrollManager，由外部（ProfileViewController）负责绑定滚动回调
 class AssetFlowContainerView: UIView {
     
     weak var delegate: AssetFlowContainerDelegate?
-    weak var scrollManager: NestedScrollManager?
     
     private(set) var currentIndex: Int = 0
     private var pageCount: Int = 0

@@ -31,30 +31,23 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 /// 资产流数据源
 /// 外部通过实现此类来注入不同的资产流配置
+/// 
+/// 解耦设计：不再持有 NestedScrollManager
+/// ProfileViewController 会在组装时自动绑定滚动回调
 class ProfileAssetFlowDataSource: AssetFlowDataSource, AssetFlowDelegate {
-    
-    private weak var scrollManager: NestedScrollManager?
-    
-    init(scrollManager: NestedScrollManager?) {
-        self.scrollManager = scrollManager
-    }
     
     // MARK: - AssetFlowDataSource
     
     func assetFlowConfigs() -> [AssetFlowConfig] {
         return [
             // 出境模块 - 由开发者 A 开发
-            AssetFlowConfig(title: "出境") { [weak self] in
-                let vc = AppearanceViewController()
-                vc.setScrollManager(self?.scrollManager)
-                return vc
+            AssetFlowConfig(title: "出境") {
+                return AppearanceViewController()
             },
             
             // 创作模块 - 由开发者 B 开发
-            AssetFlowConfig(title: "创作") { [weak self] in
-                let vc = CreationViewController()
-                vc.setScrollManager(self?.scrollManager)
-                return vc
+            AssetFlowConfig(title: "创作") {
+                return CreationViewController()
             }
             
             // 可以继续添加更多模块...

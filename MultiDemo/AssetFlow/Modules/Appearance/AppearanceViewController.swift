@@ -6,6 +6,8 @@ import UIKit
 
 /// 出境模块 ViewController
 /// 实现 AssetFlowPageProtocol 协议
+/// 
+/// 解耦设计：不依赖 NestedScrollManager，通过闭包回调与父容器通信
 class AppearanceViewController: UIViewController, AssetFlowPageProtocol {
     
     // MARK: - AssetFlowPageProtocol
@@ -14,16 +16,21 @@ class AppearanceViewController: UIViewController, AssetFlowPageProtocol {
         return currentWorksFlowVC
     }
     
-    func setScrollManager(_ manager: NestedScrollManager?) {
-        self.scrollManager = manager
+    func setScrollCallbacks(onScroll: @escaping ScrollEventHandler,
+                            onChildChanged: @escaping CurrentChildChangedHandler) {
+        self.onScrollEvent = onScroll
+        self.onCurrentChildChanged = onChildChanged
     }
     
     func getAllHorizontalScrollViews() -> [UIScrollView] {
         return [pageCollectionView]
     }
     
+    // MARK: - 闭包回调（解耦 NestedScrollManager）
+    private var onScrollEvent: ScrollEventHandler?
+    private var onCurrentChildChanged: CurrentChildChangedHandler?
+    
     // MARK: - Properties
-    private weak var scrollManager: NestedScrollManager?
     private var currentWorksFlowVC: WorksFlowViewController?
     private var loadedPages: [Int: WorksFlowViewController] = [:]
     
@@ -103,7 +110,11 @@ class AppearanceViewController: UIViewController, AssetFlowPageProtocol {
         let category = subCategories[index]
         let path = "出境 > \(category.title)"
         let worksVC = WorksFlowViewController(categoryPath: path, color: category.color)
-        worksVC.scrollManager = scrollManager
+        
+        // 绑定闭包回调
+        worksVC.onScrollEvent = { [weak self] scrollView in
+            self?.onScrollEvent?(scrollView)
+        }
         
         addChild(worksVC)
         worksVC.didMove(toParent: self)
@@ -112,7 +123,7 @@ class AppearanceViewController: UIViewController, AssetFlowPageProtocol {
         
         if index == currentIndex {
             currentWorksFlowVC = worksVC
-            scrollManager?.currentChild = worksVC
+            onCurrentChildChanged?(worksVC)
         }
         
         print("[AppearanceViewController] 懒加载: \(path)")
@@ -162,7 +173,7 @@ extension AppearanceViewController: UICollectionViewDelegate {
             
             if let worksVC = loadedPages[index] {
                 currentWorksFlowVC = worksVC
-                scrollManager?.currentChild = worksVC
+                onCurrentChildChanged?(worksVC)
             }
         }
     }

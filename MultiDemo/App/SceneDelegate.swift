@@ -28,7 +28,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         profileVC.configureProfile(profile)
         
         // 通过 DataSource 注入资产流配置（保持强引用）
-        assetFlowDataSource = ProfileAssetFlowDataSource(scrollManager: profileVC.scrollManager)
+        // 解耦设计：DataSource 不再需要 scrollManager，ProfileVC 会自动绑定闭包
+        assetFlowDataSource = ProfileAssetFlowDataSource()
         profileVC.assetFlowDataSource = assetFlowDataSource
         profileVC.assetFlowDelegate = assetFlowDataSource
         

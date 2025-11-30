@@ -84,7 +84,6 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
     private lazy var assetFlowContainer: AssetFlowContainerView = {
         let container = AssetFlowContainerView()
         container.delegate = self
-        container.scrollManager = scrollManager
         container.menuHeight = menuHeight
         return container
     }()
@@ -301,7 +300,17 @@ extension ProfileViewController: AssetFlowContainerDelegate {
         
         // 懒加载创建
         let page = assetFlowConfigs[index].pageFactory()
-        page.setScrollManager(scrollManager)
+        
+        // 绑定闭包回调（组装层负责连接 NestedScrollManager）
+        page.setScrollCallbacks(
+            onScroll: { [weak self] scrollView in
+                self?.scrollManager.handleChildScroll(scrollView)
+            },
+            onChildChanged: { [weak self] child in
+                self?.scrollManager.currentChild = child
+            }
+        )
+        
         loadedPages[index] = page
         
         // 添加为子控制器

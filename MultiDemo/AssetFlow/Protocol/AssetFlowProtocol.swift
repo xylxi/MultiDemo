@@ -2,18 +2,29 @@ import UIKit
 
 // MARK: - ================== 资产流协议规范 ==================
 
+// MARK: - 滚动事件回调类型
+/// 子视图滚动事件回调
+public typealias ScrollEventHandler = (UIScrollView) -> Void
+/// 当前子视图变更回调
+public typealias CurrentChildChangedHandler = (NestedScrollChildProtocol) -> Void
+
 // MARK: - 资产流页面协议
 /// 每个资产流模块（如出境、创作）必须实现此协议
 /// 用于规范资产流页面的基本行为
+/// 
+/// 解耦设计：通过闭包回调与父容器通信，不直接依赖 NestedScrollManager
 public protocol AssetFlowPageProtocol: UIViewController {
     
     /// 获取当前可滚动的子视图（用于嵌套滚动联动）
     /// - Returns: 当前激活的可滚动视图，如果没有则返回 nil
     func getCurrentScrollableChild() -> NestedScrollChildProtocol?
     
-    /// 设置嵌套滚动管理器
-    /// - Parameter manager: 滚动管理器实例
-    func setScrollManager(_ manager: NestedScrollManager?)
+    /// 设置滚动事件回调（解耦方式）
+    /// - Parameters:
+    ///   - onScroll: 子视图滚动时的回调
+    ///   - onChildChanged: 当前激活子视图变更时的回调
+    func setScrollCallbacks(onScroll: @escaping ScrollEventHandler, 
+                            onChildChanged: @escaping CurrentChildChangedHandler)
     
     /// 获取内部所有水平滚动的 CollectionView（用于手势排除）
     /// - Returns: 所有需要排除手势冲突的 CollectionView

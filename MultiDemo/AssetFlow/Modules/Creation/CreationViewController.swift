@@ -5,6 +5,8 @@ import UIKit
 // 此模块包含三级分类（创作 > 资产 > 全部/图片/视频/收藏）
 
 /// 创作模块 ViewController
+/// 
+/// 解耦设计：不依赖 NestedScrollManager，通过闭包回调与父容器通信
 class CreationViewController: UIViewController, AssetFlowPageProtocol {
     
     // MARK: - AssetFlowPageProtocol
@@ -21,8 +23,10 @@ class CreationViewController: UIViewController, AssetFlowPageProtocol {
         return nil
     }
     
-    func setScrollManager(_ manager: NestedScrollManager?) {
-        self.scrollManager = manager
+    func setScrollCallbacks(onScroll: @escaping ScrollEventHandler,
+                            onChildChanged: @escaping CurrentChildChangedHandler) {
+        self.onScrollEvent = onScroll
+        self.onCurrentChildChanged = onChildChanged
     }
     
     func getAllHorizontalScrollViews() -> [UIScrollView] {
@@ -37,8 +41,11 @@ class CreationViewController: UIViewController, AssetFlowPageProtocol {
         return views
     }
     
+    // MARK: - 闭包回调（解耦 NestedScrollManager）
+    private var onScrollEvent: ScrollEventHandler?
+    private var onCurrentChildChanged: CurrentChildChangedHandler?
+    
     // MARK: - Properties
-    private weak var scrollManager: NestedScrollManager?
     private var loadedPages: [Int: UIViewController] = [:]
     private var currentIndex: Int = 0
     
@@ -142,13 +149,24 @@ class CreationViewController: UIViewController, AssetFlowPageProtocol {
         if category == .assets {
             // 资产有三级分类
             let assetsVC = AssetsViewController()
-            assetsVC.setScrollManager(scrollManager)
+            // 传递闭包给子模块
+            assetsVC.setScrollCallbacks(
+                onScroll: { [weak self] scrollView in
+                    self?.onScrollEvent?(scrollView)
+                },
+                onChildChanged: { [weak self] child in
+                    self?.onCurrentChildChanged?(child)
+                }
+            )
             page = assetsVC
             print("[CreationViewController] 懒加载: 创作 > 资产 (三级分类)")
         } else {
             let path = "创作 > \(category.title)"
             let worksVC = WorksFlowViewController(categoryPath: path, color: category.color)
-            worksVC.scrollManager = scrollManager
+            // 绑定闭包回调
+            worksVC.onScrollEvent = { [weak self] scrollView in
+                self?.onScrollEvent?(scrollView)
+            }
             page = worksVC
             print("[CreationViewController] 懒加载: \(path)")
         }
@@ -168,7 +186,7 @@ class CreationViewController: UIViewController, AssetFlowPageProtocol {
     
     private func updateCurrentChild() {
         if let scrollChild = getCurrentScrollableChild() {
-            scrollManager?.currentChild = scrollChild
+            onCurrentChildChanged?(scrollChild)
         }
     }
 }
@@ -227,9 +245,14 @@ extension CreationViewController: UICollectionViewDelegateFlowLayout {
 
 /// 资产 ViewController
 /// 创作模块的子模块，包含四个子分类
+/// 
+/// 解耦设计：不依赖 NestedScrollManager，通过闭包回调与父容器通信
 class AssetsViewController: UIViewController {
     
-    private weak var scrollManager: NestedScrollManager?
+    // MARK: - 闭包回调（解耦 NestedScrollManager）
+    private var onScrollEvent: ScrollEventHandler?
+    private var onCurrentChildChanged: CurrentChildChangedHandler?
+    
     private var loadedPages: [Int: WorksFlowViewController] = [:]
     private var currentIndex: Int = 0
     
@@ -298,8 +321,10 @@ class AssetsViewController: UIViewController {
         menuView.configure(with: menuItems)
     }
     
-    func setScrollManager(_ manager: NestedScrollManager?) {
-        self.scrollManager = manager
+    func setScrollCallbacks(onScroll: @escaping ScrollEventHandler,
+                            onChildChanged: @escaping CurrentChildChangedHandler) {
+        self.onScrollEvent = onScroll
+        self.onCurrentChildChanged = onChildChanged
     }
     
     func getCurrentScrollableChild() -> NestedScrollChildProtocol? {
@@ -318,7 +343,11 @@ class AssetsViewController: UIViewController {
         let category = subCategories[index]
         let path = "创作 > 资产 > \(category.title)"
         let worksVC = WorksFlowViewController(categoryPath: path, color: category.color)
-        worksVC.scrollManager = scrollManager
+        
+        // 绑定闭包回调
+        worksVC.onScrollEvent = { [weak self] scrollView in
+            self?.onScrollEvent?(scrollView)
+        }
         
         addChild(worksVC)
         worksVC.didMove(toParent: self)
@@ -326,7 +355,7 @@ class AssetsViewController: UIViewController {
         loadedPages[index] = worksVC
         
         if index == currentIndex {
-            scrollManager?.currentChild = worksVC
+            onCurrentChildChanged?(worksVC)
         }
         
         print("[AssetsViewController] 懒加载: \(path)")
@@ -375,7 +404,7 @@ extension AssetsViewController: UICollectionViewDelegate {
             menuView.selectItem(at: index)
             
             if let worksVC = loadedPages[index] {
-                scrollManager?.currentChild = worksVC
+                onCurrentChildChanged?(worksVC)
             }
         }
     }

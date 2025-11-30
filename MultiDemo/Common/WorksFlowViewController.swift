@@ -4,16 +4,22 @@ import UIKit
 
 /// 作品流 ViewController（叶子节点）
 /// 展示具体的作品列表
+/// 
+/// 解耦设计：不依赖 NestedScrollManager，通过闭包回调处理滚动事件
 class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
     
     // MARK: - NestedScrollChildProtocol
     var childScrollView: UIScrollView { collectionView }
     var canChildScroll: Bool = false
     
+    // MARK: - 闭包回调（解耦 NestedScrollManager）
+    
+    /// 滚动事件回调，由外部处理滚动逻辑
+    var onScrollEvent: ((UIScrollView) -> Void)?
+    
     // MARK: - Properties
     private let categoryPath: String
     private let color: UIColor
-    weak var scrollManager: NestedScrollManager?
     
     final class MyCollectionView: UICollectionView {
         override var contentOffset: CGPoint {
@@ -91,7 +97,7 @@ extension WorksFlowViewController: UICollectionViewDataSource {
 // MARK: - UICollectionViewDelegate
 extension WorksFlowViewController: UICollectionViewDelegate {
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        scrollManager?.handleChildScroll(scrollView)
+        onScrollEvent?(scrollView)
     }
 }
 
