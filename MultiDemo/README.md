@@ -1,63 +1,113 @@
-# ProfileDemo - iOS 个人页面容器框架
+# ProfileDemo - iOS 个人页面组件化框架
 
 ## 最低支持版本
 
 **iOS 13.0+**
 
-## 架构设计
-
-### 核心理念
-
-`ProfileViewController` 是一个**容器页面**，职责分离：
-- **ProfileViewController**：只负责用户信息头部 + 容器框架
-- **资产流模块**：由外部通过协议注入，支持多人协作开发
-
-### 项目结构
+## 目录结构
 
 ```
 ProfileDemo/
-├── 协议层
-│   ├── AssetFlowProtocol.swift      # 资产流协议规范
-│   └── NestedScrollProtocol.swift   # 嵌套滚动协议
 │
-├── 容器层
-│   ├── ProfileViewController.swift   # 个人页面容器
-│   ├── AssetFlowContainerView.swift  # 资产流容器视图
-│   └── ProfileHeaderView.swift       # 用户信息头部
+├── App/                                    # 应用层
+│   ├── AppDelegate.swift                   # App 生命周期
+│   ├── SceneDelegate.swift                 # Scene 生命周期
+│   └── Info.plist                          # 应用配置
 │
-├── 组件层
-│   ├── MenuView.swift               # 分类菜单组件
-│   └── WorksFlowViewController.swift # 作品流（叶子节点）
+├── Core/                                   # 核心层（可独立成 Pod/SPM）
+│   └── ScrollManager/
+│       └── NestedScrollProtocol.swift      # 嵌套滚动协议与管理器
 │
-├── 业务模块层（由不同开发者负责）
-│   ├── AppearanceViewController.swift # 出境模块（开发者 A）
-│   └── CreationViewController.swift   # 创作模块（开发者 B）
+├── Components/                             # 通用组件层（可独立成 Pod/SPM）
+│   ├── Menu/
+│   │   └── MenuView.swift                  # 分类菜单组件
+│   └── PageContainer/                      # 预留：分页容器组件
 │
-└── AppDelegate.swift                 # 使用示例
+├── Profile/                                # 个人页面模块（可独立成 Pod/SPM）
+│   ├── Container/
+│   │   └── ProfileViewController.swift     # 个人页面容器
+│   └── Header/
+│       └── ProfileHeaderView.swift         # 用户信息头部 + HeaderBar
+│
+├── AssetFlow/                              # 资产流模块（可独立成 Pod/SPM）
+│   ├── Protocol/
+│   │   └── AssetFlowProtocol.swift         # 资产流协议规范
+│   ├── Container/
+│   │   └── AssetFlowContainerView.swift    # 资产流容器视图
+│   └── Modules/                            # 业务子模块（各团队独立开发）
+│       ├── Appearance/
+│       │   └── AppearanceViewController.swift  # 出境模块
+│       └── Creation/
+│           └── CreationViewController.swift    # 创作模块
+│
+└── Common/                                 # 公共业务组件
+    └── WorksFlowViewController.swift       # 作品流列表
 ```
+
+## 组件化说明
+
+### 层级依赖关系
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                        App 层                           │
+│              (AppDelegate, SceneDelegate)               │
+└─────────────────────────┬───────────────────────────────┘
+                          │ 依赖
+┌─────────────────────────▼───────────────────────────────┐
+│                     Profile 模块                         │
+│         (ProfileViewController, ProfileHeaderView)       │
+└─────────────────────────┬───────────────────────────────┘
+                          │ 依赖
+┌─────────────────────────▼───────────────────────────────┐
+│                    AssetFlow 模块                        │
+│     (AssetFlowProtocol, AssetFlowContainerView)         │
+├─────────────────────────────────────────────────────────┤
+│  Modules/          │  Modules/          │  Modules/     │
+│  Appearance/       │  Creation/         │  ...          │
+│  (开发者 A)         │  (开发者 B)         │  (开发者 N)   │
+└─────────────────────────┬───────────────────────────────┘
+                          │ 依赖
+┌─────────────────────────▼───────────────────────────────┐
+│                    Components 层                         │
+│              (MenuView, PageContainer)                   │
+└─────────────────────────┬───────────────────────────────┘
+                          │ 依赖
+┌─────────────────────────▼───────────────────────────────┐
+│                       Core 层                            │
+│      (NestedScrollProtocol, NestedScrollManager)        │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 组件化拆分建议
+
+| 组件 | Pod/SPM 名称建议 | 说明 |
+|------|-----------------|------|
+| Core | `ProfileCore` | 嵌套滚动核心协议 |
+| Components | `ProfileComponents` | 通用 UI 组件 |
+| Profile | `ProfileContainer` | 个人页面容器框架 |
+| AssetFlow/Protocol | `AssetFlowProtocol` | 资产流协议（接口层） |
+| AssetFlow/Container | `AssetFlowContainer` | 资产流容器实现 |
+| AssetFlow/Modules/* | 各业务独立 Pod | 各团队独立维护 |
+| Common | `ProfileCommon` | 公共业务组件 |
 
 ## 协议规范
 
 ### AssetFlowPageProtocol
 
-每个资产流模块必须实现此协议：
+每个资产流模块必须实现：
 
 ```swift
 public protocol AssetFlowPageProtocol: UIViewController {
-    /// 获取当前可滚动的子视图（用于嵌套滚动联动）
     func getCurrentScrollableChild() -> NestedScrollChildProtocol?
-    
-    /// 设置嵌套滚动管理器
     func setScrollManager(_ manager: NestedScrollManager?)
-    
-    /// 获取内部所有水平滚动的 CollectionView（用于手势排除）
     func getAllHorizontalScrollViews() -> [UIScrollView]
 }
 ```
 
 ### AssetFlowDataSource
 
-外部通过实现此协议注入资产流配置：
+外部注入资产流配置：
 
 ```swift
 public protocol AssetFlowDataSource: AnyObject {
@@ -65,135 +115,46 @@ public protocol AssetFlowDataSource: AnyObject {
 }
 ```
 
-### AssetFlowConfig
-
-配置单个资产流模块：
+## 使用示例
 
 ```swift
-public struct AssetFlowConfig {
-    let title: String                           // 菜单标题
-    let pageFactory: () -> AssetFlowPageProtocol // 懒加载工厂
-}
-```
-
-## 使用方式
-
-### 1. 创建 ProfileViewController
-
-```swift
+// 1. 创建 ProfileViewController
 let profileVC = ProfileViewController()
 
-// 配置用户信息
+// 2. 配置用户信息
 profileVC.configureProfile(UserProfile(...))
-```
 
-### 2. 实现数据源
-
-```swift
-class MyAssetFlowDataSource: AssetFlowDataSource {
-    func assetFlowConfigs() -> [AssetFlowConfig] {
-        return [
-            AssetFlowConfig(title: "出境") {
-                return AppearanceViewController()
-            },
-            AssetFlowConfig(title: "创作") {
-                return CreationViewController()
-            }
-        ]
-    }
-}
-```
-
-### 3. 注入数据源
-
-```swift
+// 3. 注入资产流数据源
 profileVC.assetFlowDataSource = MyAssetFlowDataSource()
 ```
 
-## 开发新模块
+## 新增资产流模块
 
-### 步骤 1：创建 ViewController
+1. 在 `AssetFlow/Modules/` 下创建新目录
+2. 实现 `AssetFlowPageProtocol` 协议
+3. 在 `AssetFlowDataSource` 中注册
 
 ```swift
-class MyModuleViewController: UIViewController, AssetFlowPageProtocol {
-    
-    private weak var scrollManager: NestedScrollManager?
-    
-    // MARK: - AssetFlowPageProtocol
-    
-    func getCurrentScrollableChild() -> NestedScrollChildProtocol? {
-        // 返回当前可滚动的子视图
-    }
-    
-    func setScrollManager(_ manager: NestedScrollManager?) {
-        self.scrollManager = manager
-    }
-    
-    func getAllHorizontalScrollViews() -> [UIScrollView] {
-        // 返回所有水平滚动的 CollectionView
-        return [myPageCollectionView]
-    }
+// AssetFlow/Modules/NewModule/NewModuleViewController.swift
+class NewModuleViewController: UIViewController, AssetFlowPageProtocol {
+    // 实现协议方法...
+}
+
+// 注册
+AssetFlowConfig(title: "新模块") {
+    return NewModuleViewController()
 }
 ```
 
-### 步骤 2：在数据源中注册
+## 多团队协作
 
-```swift
-AssetFlowConfig(title: "我的模块") {
-    let vc = MyModuleViewController()
-    vc.setScrollManager(scrollManager)
-    return vc
-}
-```
-
-## 懒加载验证
-
-运行应用，观察控制台日志：
-
-```
-[ProfileViewController] 懒加载资产流页面: 出境
-[AppearanceViewController] viewDidLoad - 出境模块已加载
-[AppearanceViewController] 懒加载: 出境 > 作品
-
-# 滑动到"创作"后
-[ProfileViewController] 懒加载资产流页面: 创作
-[CreationViewController] viewDidLoad - 创作模块已加载
-[CreationViewController] 懒加载: 创作 > 发布
-
-# 在"创作"中滑动到"资产"后
-[CreationViewController] 懒加载: 创作 > 资产 (三级分类)
-[AssetsViewController] viewDidLoad - 资产模块已加载
-[AssetsViewController] 懒加载: 创作 > 资产 > 全部
-```
-
-## 视图层级
-
-```
-ProfileViewController
-├── HeaderBar (固定顶部)
-├── MainScrollView (外层滚动)
-│   ├── ProfileHeaderView (用户信息 - ProfileVC 负责)
-│   └── AssetFlowContainerView (资产流 - 外部注入)
-│       ├── MenuView (一级分类菜单)
-│       └── PageCollectionView (懒加载容器)
-│           ├── AppearanceViewController (出境)
-│           │   ├── MenuView
-│           │   └── PageCollectionView
-│           │       └── WorksFlowViewController...
-│           └── CreationViewController (创作)
-│               ├── MenuView
-│               └── PageCollectionView
-│                   ├── WorksFlowViewController (发布)
-│                   ├── AssetsViewController (资产 - 三级)
-│                   └── WorksFlowViewController (喜欢)
-```
-
-## 多人协作
-
-| 区域 | 负责人 | 文件 |
-|------|--------|------|
-| 容器框架 | 主开发 | ProfileViewController, AssetFlowContainerView |
-| 用户信息 | 主开发 | ProfileHeaderView |
-| 出境模块 | 开发者 A | AppearanceViewController |
-| 创作模块 | 开发者 B | CreationViewController |
-| 公共组件 | 主开发 | MenuView, WorksFlowViewController |
+| 目录 | 负责团队 |
+|------|---------|
+| `Core/` | 基础架构组 |
+| `Components/` | 基础架构组 |
+| `Profile/` | 个人页面组 |
+| `AssetFlow/Protocol/` | 个人页面组 |
+| `AssetFlow/Container/` | 个人页面组 |
+| `AssetFlow/Modules/Appearance/` | 出境业务组 |
+| `AssetFlow/Modules/Creation/` | 创作业务组 |
+| `Common/` | 公共组件组 |

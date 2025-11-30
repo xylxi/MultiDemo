@@ -12,37 +12,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         
-        // iOS 13+ 使用 SceneDelegate
-        if #available(iOS 13.0, *) {
-            // SceneDelegate 会处理 window 创建
-        } else {
-            // iOS 12 及以下使用传统方式
-            window = UIWindow(frame: UIScreen.main.bounds)
-            
-            let profileVC = ProfileViewController()
-            
-            let profile = UserProfile(
-                avatar: "",
-                name: "创作者小明",
-                userId: "xiaoming_2024",
-                bio: "热爱生活，热爱创作 ✨ 每天分享有趣的内容",
-                followingCount: 256,
-                followersCount: 12580,
-                likesCount: 98700
-            )
-            profileVC.configureProfile(profile)
-            
-            assetFlowDataSource = ProfileAssetFlowDataSource(scrollManager: profileVC.scrollManager)
-            profileVC.assetFlowDataSource = assetFlowDataSource
-            profileVC.assetFlowDelegate = assetFlowDataSource
-            
-            let nav = UINavigationController(rootViewController: profileVC)
-            nav.setNavigationBarHidden(true, animated: false)
-            
-            window?.rootViewController = nav
-            window?.makeKeyAndVisible()
-        }
-        
         return true
     }
     

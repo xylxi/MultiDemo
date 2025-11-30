@@ -15,6 +15,16 @@ class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
     private let color: UIColor
     weak var scrollManager: NestedScrollManager?
     
+    final class MyCollectionView: UICollectionView {
+        override var contentOffset: CGPoint {
+            didSet {
+                if abs(contentOffset.y - oldValue.y) > 50 {
+                    print("")
+                }
+            }
+        }
+    }
+    
     // MARK: - UI
     private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
@@ -22,7 +32,7 @@ class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
         layout.minimumLineSpacing = 2
         layout.sectionInset = UIEdgeInsets(top: 2, left: 2, bottom: 2, right: 2)
         
-        let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        let cv = MyCollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .systemBackground
         cv.delegate = self
         cv.dataSource = self
