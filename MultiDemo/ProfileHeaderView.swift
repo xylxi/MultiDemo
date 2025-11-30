@@ -1,6 +1,8 @@
 import UIKit
 
-// MARK: - 用户信息模型
+// MARK: - ================== 用户信息头部 ==================
+
+// MARK: - 用户模型
 struct UserProfile {
     let avatar: String
     let name: String
@@ -14,19 +16,30 @@ struct UserProfile {
 // MARK: - 用户信息头部视图
 class ProfileHeaderView: UIView {
     
-    // MARK: - UI Components
-    private lazy var avatarImageView: UIImageView = {
-        let iv = UIImageView()
-        iv.backgroundColor = .systemGray4
-        iv.layer.cornerRadius = 45
-        iv.clipsToBounds = true
-        iv.contentMode = .scaleAspectFill
-        return iv
+    /// 头像底部 Y 坐标（用于计算 HeaderBar 透明度）
+    var avatarBottomY: CGFloat {
+        return avatarView.frame.maxY
+    }
+    
+    private lazy var avatarView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .systemGray4
+        view.layer.cornerRadius = 40
+        view.clipsToBounds = true
+        return view
+    }()
+    
+    private lazy var avatarLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 32, weight: .medium)
+        label.textColor = .white
+        label.textAlignment = .center
+        return label
     }()
     
     private lazy var nameLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 22, weight: .bold)
+        label.font = .systemFont(ofSize: 20, weight: .bold)
         label.textColor = .label
         return label
     }()
@@ -51,36 +64,19 @@ class ProfileHeaderView: UIView {
         stack.axis = .horizontal
         stack.distribution = .equalSpacing
         stack.alignment = .center
-        stack.spacing = 30
         return stack
     }()
     
-    private lazy var followButton: UIButton = {
-        let btn = UIButton(type: .system)
-        btn.setTitle("关注", for: .normal)
-        btn.setTitleColor(.white, for: .normal)
-        btn.backgroundColor = .systemPink
-        btn.layer.cornerRadius = 22
-        btn.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        return btn
+    private lazy var editButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("编辑资料", for: .normal)
+        button.setTitleColor(.label, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
+        button.backgroundColor = .systemGray5
+        button.layer.cornerRadius = 16
+        return button
     }()
     
-    private lazy var messageButton: UIButton = {
-        let btn = UIButton(type: .system)
-        btn.setTitle("私信", for: .normal)
-        btn.setTitleColor(.label, for: .normal)
-        btn.backgroundColor = .systemGray5
-        btn.layer.cornerRadius = 22
-        btn.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        return btn
-    }()
-    
-    /// 头像底部的 Y 坐标，用于判断 HeaderBar 何时显示标题
-    var avatarBottomY: CGFloat {
-        return avatarImageView.frame.maxY
-    }
-    
-    // MARK: - Init
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
@@ -90,97 +86,89 @@ class ProfileHeaderView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    // MARK: - Setup
     private func setupUI() {
         backgroundColor = .systemBackground
         
-        addSubview(avatarImageView)
+        addSubview(avatarView)
+        avatarView.addSubview(avatarLabel)
         addSubview(nameLabel)
         addSubview(userIdLabel)
         addSubview(bioLabel)
         addSubview(statsStackView)
-        addSubview(followButton)
-        addSubview(messageButton)
+        addSubview(editButton)
         
-        avatarImageView.translatesAutoresizingMaskIntoConstraints = false
+        avatarView.translatesAutoresizingMaskIntoConstraints = false
+        avatarLabel.translatesAutoresizingMaskIntoConstraints = false
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
         userIdLabel.translatesAutoresizingMaskIntoConstraints = false
         bioLabel.translatesAutoresizingMaskIntoConstraints = false
         statsStackView.translatesAutoresizingMaskIntoConstraints = false
-        followButton.translatesAutoresizingMaskIntoConstraints = false
-        messageButton.translatesAutoresizingMaskIntoConstraints = false
+        editButton.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            // Avatar
-            avatarImageView.topAnchor.constraint(equalTo: topAnchor, constant: 20),
-            avatarImageView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            avatarImageView.widthAnchor.constraint(equalToConstant: 90),
-            avatarImageView.heightAnchor.constraint(equalToConstant: 90),
+            avatarView.topAnchor.constraint(equalTo: topAnchor, constant: 16),
+            avatarView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            avatarView.widthAnchor.constraint(equalToConstant: 80),
+            avatarView.heightAnchor.constraint(equalToConstant: 80),
             
-            // Name
-            nameLabel.topAnchor.constraint(equalTo: avatarImageView.bottomAnchor, constant: 12),
+            avatarLabel.centerXAnchor.constraint(equalTo: avatarView.centerXAnchor),
+            avatarLabel.centerYAnchor.constraint(equalTo: avatarView.centerYAnchor),
+            
+            nameLabel.topAnchor.constraint(equalTo: avatarView.bottomAnchor, constant: 12),
             nameLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
             
-            // User ID
             userIdLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 4),
             userIdLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
             
-            // Bio
             bioLabel.topAnchor.constraint(equalTo: userIdLabel.bottomAnchor, constant: 12),
-            bioLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 40),
-            bioLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -40),
+            bioLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 32),
+            bioLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -32),
             
-            // Stats
-            statsStackView.topAnchor.constraint(equalTo: bioLabel.bottomAnchor, constant: 20),
-            statsStackView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            statsStackView.topAnchor.constraint(equalTo: bioLabel.bottomAnchor, constant: 16),
+            statsStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 48),
+            statsStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -48),
             
-            // Buttons
-            followButton.topAnchor.constraint(equalTo: statsStackView.bottomAnchor, constant: 20),
-            followButton.trailingAnchor.constraint(equalTo: centerXAnchor, constant: -8),
-            followButton.widthAnchor.constraint(equalToConstant: 120),
-            followButton.heightAnchor.constraint(equalToConstant: 44),
-            
-            messageButton.topAnchor.constraint(equalTo: statsStackView.bottomAnchor, constant: 20),
-            messageButton.leadingAnchor.constraint(equalTo: centerXAnchor, constant: 8),
-            messageButton.widthAnchor.constraint(equalToConstant: 120),
-            messageButton.heightAnchor.constraint(equalToConstant: 44),
-            
-            messageButton.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -20)
+            editButton.topAnchor.constraint(equalTo: statsStackView.bottomAnchor, constant: 16),
+            editButton.centerXAnchor.constraint(equalTo: centerXAnchor),
+            editButton.widthAnchor.constraint(equalToConstant: 120),
+            editButton.heightAnchor.constraint(equalToConstant: 32),
+            editButton.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -16)
         ])
     }
     
     func configure(with profile: UserProfile) {
+        avatarLabel.text = String(profile.name.prefix(1))
         nameLabel.text = profile.name
         userIdLabel.text = "@\(profile.userId)"
         bioLabel.text = profile.bio
         
-        // 清除旧的 stats
+        // 清除旧的统计视图
         statsStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         
-        // 添加新的 stats
+        // 添加统计项
         let stats = [
             ("关注", profile.followingCount),
             ("粉丝", profile.followersCount),
             ("获赞", profile.likesCount)
         ]
         
-        for (title, count) in stats {
-            let statView = createStatView(count: count, title: title)
-            statsStackView.addArrangedSubview(statView)
+        for stat in stats {
+            let view = createStatView(title: stat.0, count: stat.1)
+            statsStackView.addArrangedSubview(view)
         }
     }
     
-    private func createStatView(count: Int, title: String) -> UIView {
+    private func createStatView(title: String, count: Int) -> UIView {
         let container = UIView()
         
         let countLabel = UILabel()
         countLabel.font = .systemFont(ofSize: 18, weight: .bold)
         countLabel.textColor = .label
-        countLabel.text = formatNumber(count)
+        countLabel.text = formatCount(count)
         countLabel.textAlignment = .center
         
         let titleLabel = UILabel()
-        titleLabel.font = .systemFont(ofSize: 13)
+        titleLabel.font = .systemFont(ofSize: 12)
         titleLabel.textColor = .secondaryLabel
         titleLabel.text = title
         titleLabel.textAlignment = .center
@@ -205,10 +193,96 @@ class ProfileHeaderView: UIView {
         return container
     }
     
-    private func formatNumber(_ number: Int) -> String {
-        if number >= 10000 {
-            return String(format: "%.1fw", Double(number) / 10000)
+    private func formatCount(_ count: Int) -> String {
+        if count >= 10000 {
+            return String(format: "%.1fw", Double(count) / 10000)
+        } else if count >= 1000 {
+            return String(format: "%.1fk", Double(count) / 1000)
         }
-        return "\(number)"
+        return "\(count)"
+    }
+}
+
+// MARK: - ================== 顶部导航栏 ==================
+
+class ProfileHeaderBar: UIView {
+    
+    private lazy var backgroundView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .systemBackground
+        view.alpha = 0
+        return view
+    }()
+    
+    private lazy var titleLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 17, weight: .semibold)
+        label.textColor = .label
+        label.alpha = 0
+        return label
+    }()
+    
+    private lazy var backButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "chevron.left"), for: .normal)
+        button.tintColor = .label
+        return button
+    }()
+    
+    private lazy var moreButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "ellipsis"), for: .normal)
+        button.tintColor = .label
+        return button
+    }()
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupUI()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupUI() {
+        addSubview(backgroundView)
+        addSubview(backButton)
+        addSubview(titleLabel)
+        addSubview(moreButton)
+        
+        backgroundView.translatesAutoresizingMaskIntoConstraints = false
+        backButton.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        moreButton.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            backgroundView.topAnchor.constraint(equalTo: topAnchor),
+            backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            
+            backButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            backButton.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10),
+            backButton.widthAnchor.constraint(equalToConstant: 44),
+            backButton.heightAnchor.constraint(equalToConstant: 44),
+            
+            titleLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
+            
+            moreButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            moreButton.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
+            moreButton.widthAnchor.constraint(equalToConstant: 44),
+            moreButton.heightAnchor.constraint(equalToConstant: 44)
+        ])
+    }
+    
+    func configure(title: String) {
+        titleLabel.text = title
+    }
+    
+    func updateAppearance(progress: CGFloat) {
+        backgroundView.alpha = progress
+        titleLabel.alpha = progress
     }
 }

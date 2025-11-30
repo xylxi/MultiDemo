@@ -1,23 +1,40 @@
 import UIKit
 
+// MARK: - ================== 嵌套滚动协议 ==================
+
 // MARK: - 嵌套滚动子视图协议
-protocol NestedScrollChildProtocol: AnyObject {
+/// 作为嵌套滚动的子视图需要实现此协议
+public protocol NestedScrollChildProtocol: AnyObject {
+    
+    /// 子视图的 ScrollView
     var childScrollView: UIScrollView { get }
+    
+    /// 是否允许子视图滚动
     var canChildScroll: Bool { get set }
 }
 
 // MARK: - 嵌套滚动父视图协议
-protocol NestedScrollParentProtocol: AnyObject {
+/// 作为嵌套滚动的父视图需要实现此协议
+public protocol NestedScrollParentProtocol: AnyObject {
+    
+    /// 父视图是否可以滚动
     var canParentScroll: Bool { get set }
+    
+    /// 头部视图的高度（需要滚动隐藏的部分）
     var headerHeight: CGFloat { get }
+    
+    /// 吸顶偏移量（始终显示的部分高度）
     var stickyOffset: CGFloat { get }
+    
+    /// 父视图的 ScrollView
     var parentScrollView: UIScrollView { get }
 }
 
-// MARK: - 支持排除视图的父 ScrollView
+// MARK: - 支持手势排除的 ScrollView
+/// 支持配置排除特定视图的手势同时识别
 public class NestedParentScrollView: UIScrollView, UIGestureRecognizerDelegate {
     
-    /// 排除的父视图列表（这些视图的子视图手势不会同时识别）
+    /// 排除的视图列表（这些视图的手势不会与父 ScrollView 同时识别）
     public var excludeSuperViews = [UIView]()
     
     public override init(frame: CGRect) {
@@ -53,22 +70,21 @@ public class NestedParentScrollView: UIScrollView, UIGestureRecognizerDelegate {
         if let view = otherGestureRecognizer.view {
             for excludeView in excludeSuperViews {
                 if view === excludeView {
-                    // 是排除列表中的视图，不允许同时识别
                     return false
                 }
             }
         }
-        // 其他情况允许同时识别
         return true
     }
 }
 
-// MARK: - 滚动管理器
-class NestedScrollManager: NSObject {
+// MARK: - 嵌套滚动管理器
+/// 管理父子视图之间的滚动状态切换
+public class NestedScrollManager: NSObject {
     
-    weak var parentController: (UIViewController & NestedScrollParentProtocol)?
+    public weak var parentController: (UIViewController & NestedScrollParentProtocol)?
     
-    weak var currentChild: NestedScrollChildProtocol? {
+    public weak var currentChild: NestedScrollChildProtocol? {
         didSet {
             guard oldValue !== currentChild else { return }
             
@@ -88,7 +104,7 @@ class NestedScrollManager: NSObject {
     }
     
     /// 处理父视图滚动
-    func handleParentScroll(_ scrollView: UIScrollView) {
+    public func handleParentScroll(_ scrollView: UIScrollView) {
         guard let parent = parentController else { return }
         
         let offsetY = scrollView.contentOffset.y
@@ -107,7 +123,7 @@ class NestedScrollManager: NSObject {
     }
     
     /// 处理子视图滚动
-    func handleChildScroll(_ scrollView: UIScrollView) {
+    public func handleChildScroll(_ scrollView: UIScrollView) {
         guard let parent = parentController,
               let child = currentChild else { return }
         

@@ -1,14 +1,11 @@
 import UIKit
 
-// MARK: - 菜单项协议
-protocol MenuItemProtocol {
-    var title: String { get }
-    var hasChildren: Bool { get }
-}
+// MARK: - ================== 菜单组件 ==================
 
-struct MenuItem: MenuItemProtocol {
+// MARK: - 菜单项模型
+struct MenuItem {
     let title: String
-    let hasChildren: Bool
+    var hasChildren: Bool
     
     init(title: String, hasChildren: Bool = false) {
         self.title = title
@@ -16,7 +13,7 @@ struct MenuItem: MenuItemProtocol {
     }
 }
 
-// MARK: - 菜单视图代理
+// MARK: - 菜单代理
 protocol MenuViewDelegate: AnyObject {
     func menuView(_ menuView: MenuView, didSelectItemAt index: Int)
 }
@@ -26,34 +23,27 @@ class MenuView: UIView {
     
     weak var delegate: MenuViewDelegate?
     
-    private var items: [MenuItemProtocol] = []
+    private var items: [MenuItem] = []
+    private var buttons: [UIButton] = []
     private var selectedIndex: Int = 0
     
-    private lazy var collectionView: UICollectionView = {
-        let layout = UICollectionViewFlowLayout()
-        layout.scrollDirection = .horizontal
-        layout.minimumInteritemSpacing = 0
-        layout.minimumLineSpacing = 0
-        
-        let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        cv.backgroundColor = .clear
-        cv.showsHorizontalScrollIndicator = false
-        cv.delegate = self
-        cv.dataSource = self
-        cv.register(MenuCell.self, forCellWithReuseIdentifier: MenuCell.reuseId)
-        return cv
+    private lazy var stackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.distribution = .fillEqually
+        stack.alignment = .fill
+        return stack
     }()
     
     private lazy var indicatorView: UIView = {
         let view = UIView()
-        view.backgroundColor = .systemBlue
+        view.backgroundColor = .label
         view.layer.cornerRadius = 1.5
         return view
     }()
     
-    private let indicatorHeight: CGFloat = 3
-    private var indicatorWidthConstraint: NSLayoutConstraint?
     private var indicatorCenterXConstraint: NSLayoutConstraint?
+    private var indicatorWidthConstraint: NSLayoutConstraint?
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -65,59 +55,92 @@ class MenuView: UIView {
     }
     
     private func setupUI() {
-        backgroundColor = .white
+        backgroundColor = .systemBackground
         
-        addSubview(collectionView)
+        addSubview(stackView)
         addSubview(indicatorView)
         
-        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.translatesAutoresizingMaskIntoConstraints = false
         indicatorView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            collectionView.topAnchor.constraint(equalTo: topAnchor),
-            collectionView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            collectionView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            collectionView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -indicatorHeight),
+            stackView.topAnchor.constraint(equalTo: topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            stackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            stackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
             
-            indicatorView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            indicatorView.heightAnchor.constraint(equalToConstant: indicatorHeight)
+            indicatorView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
+            indicatorView.heightAnchor.constraint(equalToConstant: 3)
         ])
-        
-        indicatorWidthConstraint = indicatorView.widthAnchor.constraint(equalToConstant: 30)
-        indicatorCenterXConstraint = indicatorView.centerXAnchor.constraint(equalTo: leadingAnchor)
-        
-        indicatorWidthConstraint?.isActive = true
-        indicatorCenterXConstraint?.isActive = true
     }
     
-    func configure(with items: [MenuItemProtocol], selectedIndex: Int = 0) {
+    func configure(with items: [MenuItem]) {
         self.items = items
-        self.selectedIndex = selectedIndex
-        collectionView.reloadData()
         
-        DispatchQueue.main.async {
-            self.updateIndicator(animated: false)
+        // 清除旧按钮
+        buttons.forEach { $0.removeFromSuperview() }
+        buttons.removeAll()
+        
+        // 创建新按钮
+        for (index, item) in items.enumerated() {
+            let button = createButton(for: item, at: index)
+            buttons.append(button)
+            stackView.addArrangedSubview(button)
         }
+        
+        // 初始化指示器
+        if !items.isEmpty {
+            layoutIfNeeded()
+            selectItem(at: 0, animated: false)
+        }
+    }
+    
+    private func createButton(for item: MenuItem, at index: Int) -> UIButton {
+        let button = UIButton(type: .system)
+        
+        var title = item.title
+        if item.hasChildren {
+            title += " ▾"
+        }
+        
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(.secondaryLabel, for: .normal)
+        button.setTitleColor(.label, for: .selected)
+        button.titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
+        button.tag = index
+        button.addTarget(self, action: #selector(buttonTapped(_:)), for: .touchUpInside)
+        
+        return button
+    }
+    
+    @objc private func buttonTapped(_ sender: UIButton) {
+        let index = sender.tag
+        selectItem(at: index, animated: true)
+        delegate?.menuView(self, didSelectItemAt: index)
     }
     
     func selectItem(at index: Int, animated: Bool = true) {
-        guard index >= 0 && index < items.count else { return }
+        guard index >= 0 && index < buttons.count else { return }
+        
         selectedIndex = index
-        collectionView.reloadData()
-        updateIndicator(animated: animated)
-    }
-    
-    private func updateIndicator(animated: Bool) {
-        guard let cell = collectionView.cellForItem(at: IndexPath(item: selectedIndex, section: 0)) else {
-            return
+        
+        // 更新按钮状态
+        buttons.enumerated().forEach { i, button in
+            button.isSelected = (i == index)
+            button.titleLabel?.font = .systemFont(ofSize: 15, weight: i == index ? .semibold : .medium)
         }
         
-        let cellFrame = cell.frame
-        let centerX = cellFrame.midX
-        let width = min(cellFrame.width - 20, 40)
+        // 更新指示器位置
+        let selectedButton = buttons[index]
         
-        indicatorCenterXConstraint?.constant = centerX
-        indicatorWidthConstraint?.constant = width
+        indicatorCenterXConstraint?.isActive = false
+        indicatorWidthConstraint?.isActive = false
+        
+        indicatorCenterXConstraint = indicatorView.centerXAnchor.constraint(equalTo: selectedButton.centerXAnchor)
+        indicatorWidthConstraint = indicatorView.widthAnchor.constraint(equalToConstant: 24)
+        
+        indicatorCenterXConstraint?.isActive = true
+        indicatorWidthConstraint?.isActive = true
         
         if animated {
             UIView.animate(withDuration: 0.25) {
@@ -126,73 +149,5 @@ class MenuView: UIView {
         } else {
             layoutIfNeeded()
         }
-    }
-}
-
-// MARK: - UICollectionViewDataSource
-extension MenuView: UICollectionViewDataSource {
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return items.count
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MenuCell.reuseId, for: indexPath) as! MenuCell
-        let item = items[indexPath.item]
-        cell.configure(title: item.title, isSelected: indexPath.item == selectedIndex)
-        return cell
-    }
-}
-
-// MARK: - UICollectionViewDelegate
-extension MenuView: UICollectionViewDelegate {
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        selectItem(at: indexPath.item)
-        delegate?.menuView(self, didSelectItemAt: indexPath.item)
-    }
-}
-
-// MARK: - UICollectionViewDelegateFlowLayout
-extension MenuView: UICollectionViewDelegateFlowLayout {
-    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        let title = items[indexPath.item].title
-        let width = title.size(withAttributes: [.font: UIFont.systemFont(ofSize: 16, weight: .medium)]).width + 32
-        return CGSize(width: width, height: collectionView.bounds.height)
-    }
-}
-
-// MARK: - MenuCell
-class MenuCell: UICollectionViewCell {
-    static let reuseId = "MenuCell"
-    
-    private lazy var titleLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 16, weight: .medium)
-        label.textAlignment = .center
-        return label
-    }()
-    
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        setupUI()
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    private func setupUI() {
-        contentView.addSubview(titleLabel)
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
-        ])
-    }
-    
-    func configure(title: String, isSelected: Bool) {
-        titleLabel.text = title
-        titleLabel.textColor = isSelected ? .systemBlue : .darkGray
-        titleLabel.font = isSelected ? .systemFont(ofSize: 16, weight: .semibold) : .systemFont(ofSize: 16, weight: .medium)
     }
 }

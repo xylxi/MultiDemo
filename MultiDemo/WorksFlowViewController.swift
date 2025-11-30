@@ -1,6 +1,9 @@
 import UIKit
 
-// MARK: - 作品流 ViewController
+// MARK: - ================== 作品流 ==================
+
+/// 作品流 ViewController（叶子节点）
+/// 展示具体的作品列表
 class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
     
     // MARK: - NestedScrollChildProtocol
@@ -45,7 +48,6 @@ class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        
         print("[WorksFlowViewController] viewDidLoad - \(categoryPath)")
     }
     
@@ -61,17 +63,12 @@ class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
-    
-    func resetScrollPosition() {
-        collectionView.setContentOffset(.zero, animated: false)
-        canChildScroll = false
-    }
 }
 
 // MARK: - UICollectionViewDataSource
 extension WorksFlowViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 30
+        return 60 // Mock 60 个作品，确保可以滚动
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {

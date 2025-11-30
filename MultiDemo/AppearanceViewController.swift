@@ -1,27 +1,36 @@
 import UIKit
 
-// MARK: - 出境模块 ViewController
+// MARK: - ================== 出境模块 ==================
 // 负责人：开发者 A
-// 功能：展示用户出境相关的内容（作品、喜欢、点赞）
+// 此文件展示如何实现一个资产流模块
 
-class AppearanceViewController: UIViewController, CategoryPageProtocol {
+/// 出境模块 ViewController
+/// 实现 AssetFlowPageProtocol 协议
+class AppearanceViewController: UIViewController, AssetFlowPageProtocol {
     
-    // MARK: - CategoryPageProtocol
-    static var categoryTitle: String { "出境" }
+    // MARK: - AssetFlowPageProtocol
     
-    func getCurrentScrollChild() -> NestedScrollChildProtocol? {
+    func getCurrentScrollableChild() -> NestedScrollChildProtocol? {
         return currentWorksFlowVC
     }
     
+    func setScrollManager(_ manager: NestedScrollManager?) {
+        self.scrollManager = manager
+    }
+    
+    func getAllHorizontalScrollViews() -> [UIScrollView] {
+        return [pageCollectionView]
+    }
+    
     // MARK: - Properties
-    weak var scrollManager: NestedScrollManager?
-    private var pageManager = CategoryPageManager()
+    private weak var scrollManager: NestedScrollManager?
     private var currentWorksFlowVC: WorksFlowViewController?
+    private var loadedPages: [Int: WorksFlowViewController] = [:]
     
     // MARK: - 子分类配置
     private let subCategories: [(title: String, color: UIColor)] = [
         ("作品", .systemBlue),
-        ("喜欢", UIColor(red: 0.35, green: 0.78, blue: 0.98, alpha: 1)), // iOS 13 兼容色
+        ("喜欢", UIColor(red: 0.35, green: 0.78, blue: 0.98, alpha: 1)), // iOS 13 兼容
         ("点赞", .systemTeal)
     ]
     
@@ -32,107 +41,160 @@ class AppearanceViewController: UIViewController, CategoryPageProtocol {
         return menu
     }()
     
-    private lazy var pageContainer: PageContainerViewController = {
-        let pc = PageContainerViewController()
-        pc.delegate = self
-        pc.scrollManager = scrollManager
-        return pc
+    private lazy var pageCollectionView: UICollectionView = {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .horizontal
+        layout.minimumInteritemSpacing = 0
+        layout.minimumLineSpacing = 0
+        
+        let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        cv.backgroundColor = .systemBackground
+        cv.isPagingEnabled = true
+        cv.showsHorizontalScrollIndicator = false
+        cv.delegate = self
+        cv.dataSource = self
+        cv.register(PageCell.self, forCellWithReuseIdentifier: PageCell.reuseId)
+        cv.contentInsetAdjustmentBehavior = .never
+        return cv
     }()
+    
+    private var currentIndex: Int = 0
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        setupPages()
-        
+        setupMenu()
         print("[AppearanceViewController] viewDidLoad - 出境模块已加载")
     }
     
     private func setupUI() {
         view.backgroundColor = .systemBackground
         
-        // Menu
         view.addSubview(menuView)
+        view.addSubview(pageCollectionView)
+        
         menuView.translatesAutoresizingMaskIntoConstraints = false
+        pageCollectionView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
             menuView.topAnchor.constraint(equalTo: view.topAnchor),
             menuView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             menuView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            menuView.heightAnchor.constraint(equalToConstant: 44)
-        ])
-        
-        // Page Container
-        addChild(pageContainer)
-        view.addSubview(pageContainer.view)
-        pageContainer.didMove(toParent: self)
-        
-        pageContainer.view.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            pageContainer.view.topAnchor.constraint(equalTo: menuView.bottomAnchor),
-            pageContainer.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            pageContainer.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            pageContainer.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            menuView.heightAnchor.constraint(equalToConstant: 44),
+            
+            pageCollectionView.topAnchor.constraint(equalTo: menuView.bottomAnchor),
+            pageCollectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            pageCollectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            pageCollectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
     
-    private func setupPages() {
-        // 配置菜单
+    private func setupMenu() {
         let menuItems = subCategories.map { MenuItem(title: $0.title) }
         menuView.configure(with: menuItems)
-        
-        // 设置页面数量（不立即创建）
-        pageContainer.setPageCount(subCategories.count)
     }
     
-    /// 设置 scrollManager（由父容器调用）
-    func setScrollManager(_ manager: NestedScrollManager?) {
-        self.scrollManager = manager
-        pageContainer.scrollManager = manager
+    private func loadPage(at index: Int) -> WorksFlowViewController {
+        if let page = loadedPages[index] {
+            return page
+        }
+        
+        let category = subCategories[index]
+        let path = "出境 > \(category.title)"
+        let worksVC = WorksFlowViewController(categoryPath: path, color: category.color)
+        worksVC.scrollManager = scrollManager
+        
+        addChild(worksVC)
+        worksVC.didMove(toParent: self)
+        
+        loadedPages[index] = worksVC
+        
+        if index == currentIndex {
+            currentWorksFlowVC = worksVC
+            scrollManager?.currentChild = worksVC
+        }
+        
+        print("[AppearanceViewController] 懒加载: \(path)")
+        
+        return worksVC
     }
 }
 
 // MARK: - MenuViewDelegate
 extension AppearanceViewController: MenuViewDelegate {
     func menuView(_ menuView: MenuView, didSelectItemAt index: Int) {
-        pageContainer.scrollToPage(at: index, animated: true)
+        currentIndex = index
+        pageCollectionView.scrollToItem(at: IndexPath(item: index, section: 0), at: .centeredHorizontally, animated: true)
     }
 }
 
-// MARK: - PageContainerDelegate
-extension AppearanceViewController: PageContainerDelegate {
-    func pageContainer(_ container: PageContainerViewController, didScrollToIndex index: Int) {
-        menuView.selectItem(at: index)
-        
-        // 更新当前作品流
-        if let worksVC = container.getAllPageCollectionViews().first?.delegate as? WorksFlowViewController {
-            currentWorksFlowVC = worksVC
-        }
-        
-        // 通知父容器更新 currentChild
-        if let worksVC = currentWorksFlowVC {
-            scrollManager?.currentChild = worksVC
-        }
+// MARK: - UICollectionViewDataSource
+extension AppearanceViewController: UICollectionViewDataSource {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return subCategories.count
     }
     
-    func pageContainer(_ container: PageContainerViewController, needsPageAt index: Int) -> UIViewController? {
-        guard index >= 0 && index < subCategories.count else { return nil }
-        
-        let category = subCategories[index]
-        let path = "出境 > \(category.title)"
-        
-        let worksVC = WorksFlowViewController(categoryPath: path, color: category.color)
-        worksVC.scrollManager = scrollManager
-        
-        // 如果是第一个页面，设置为当前
-        if index == container.currentIndex {
-            currentWorksFlowVC = worksVC
-            scrollManager?.currentChild = worksVC
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: PageCell.reuseId, for: indexPath) as! PageCell
+        let page = loadPage(at: indexPath.item)
+        cell.configure(with: page.view)
+        return cell
+    }
+}
+
+// MARK: - UICollectionViewDelegate
+extension AppearanceViewController: UICollectionViewDelegate {
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        updateCurrentIndex(from: scrollView)
+    }
+    
+    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+        updateCurrentIndex(from: scrollView)
+    }
+    
+    private func updateCurrentIndex(from scrollView: UIScrollView) {
+        guard scrollView.bounds.width > 0 else { return }
+        let index = Int(round(scrollView.contentOffset.x / scrollView.bounds.width))
+        if index != currentIndex && index >= 0 && index < subCategories.count {
+            currentIndex = index
+            menuView.selectItem(at: index)
+            
+            if let worksVC = loadedPages[index] {
+                currentWorksFlowVC = worksVC
+                scrollManager?.currentChild = worksVC
+            }
         }
+    }
+}
+
+// MARK: - UICollectionViewDelegateFlowLayout
+extension AppearanceViewController: UICollectionViewDelegateFlowLayout {
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        return collectionView.bounds.size
+    }
+}
+
+// MARK: - PageCell
+private class PageCell: UICollectionViewCell {
+    static let reuseId = "PageCell"
+    
+    private var currentContentView: UIView?
+    
+    func configure(with contentView: UIView) {
+        if currentContentView === contentView { return }
         
-        print("[AppearanceViewController] 懒加载页面: \(path)")
+        currentContentView?.removeFromSuperview()
+        currentContentView = contentView
         
-        return worksVC
+        self.contentView.addSubview(contentView)
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            contentView.topAnchor.constraint(equalTo: self.contentView.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: self.contentView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: self.contentView.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: self.contentView.bottomAnchor)
+        ])
     }
 }
