@@ -3,9 +3,10 @@ import UIKit
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
-
-    var dataSource: ProfileAssetFlowDataSource?
     
+    /// 保持 dataSource 强引用，防止被释放
+    private var assetFlowDataSource: ProfileAssetFlowDataSource?
+
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         
@@ -13,12 +14,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         // 创建 ProfileViewController
         let profileVC = ProfileViewController()
-        // 通过 DataSource 注入资产流配置
-        let dataSource = ProfileAssetFlowDataSource(scrollManager: profileVC.scrollManager)
-        profileVC.assetFlowDataSource = dataSource
-        // 可选：设置代理监听事件
-        profileVC.assetFlowDelegate = dataSource
-        self.dataSource = dataSource
+        
         // 配置用户信息
         let profile = UserProfile(
             avatar: "",
@@ -30,6 +26,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             likesCount: 98700
         )
         profileVC.configureProfile(profile)
+        
+        // 通过 DataSource 注入资产流配置（保持强引用）
+        assetFlowDataSource = ProfileAssetFlowDataSource(scrollManager: profileVC.scrollManager)
+        profileVC.assetFlowDataSource = assetFlowDataSource
+        profileVC.assetFlowDelegate = assetFlowDataSource
+        
         let nav = UINavigationController(rootViewController: profileVC)
         nav.setNavigationBarHidden(true, animated: false)
         

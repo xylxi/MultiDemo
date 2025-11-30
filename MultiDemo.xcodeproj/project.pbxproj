@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3B92A89C2EDC132600A21E8D /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3B92A89B2EDC132600A21E8D /* SnapKit */; };
 		3B9DFC132EDB41F600C32276 /* LookinServer in Frameworks */ = {isa = PBXBuildFile; productRef = 3B9DFC122EDB41F600C32276 /* LookinServer */; };
 /* End PBXBuildFile section */
 
@@ -41,6 +42,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3B9DFC132EDB41F600C32276 /* LookinServer in Frameworks */,
+				3B92A89C2EDC132600A21E8D /* SnapKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +86,7 @@
 			name = MultiDemo;
 			packageProductDependencies = (
 				3B9DFC122EDB41F600C32276 /* LookinServer */,
+				3B92A89B2EDC132600A21E8D /* SnapKit */,
 			);
 			productName = MultiDemo;
 			productReference = 3B9DFBE72EDB3FF300C32276 /* MultiDemo.app */;
@@ -115,6 +118,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				3B9DFC112EDB41F600C32276 /* XCLocalSwiftPackageReference "../../Documents/iOS4app/LookinServer" */,
+				3B92A89A2EDC132600A21E8D /* XCLocalSwiftPackageReference "../../Documents/iOS4app/SnapKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3B9DFBE82EDB3FF300C32276 /* Products */;
@@ -356,6 +360,10 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		3B92A89A2EDC132600A21E8D /* XCLocalSwiftPackageReference "../../Documents/iOS4app/SnapKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../Documents/iOS4app/SnapKit;
+		};
 		3B9DFC112EDB41F600C32276 /* XCLocalSwiftPackageReference "../../Documents/iOS4app/LookinServer" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../../Documents/iOS4app/LookinServer;
@@ -363,6 +371,10 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		3B92A89B2EDC132600A21E8D /* SnapKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SnapKit;
+		};
 		3B9DFC122EDB41F600C32276 /* LookinServer */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = LookinServer;

@@ -7,7 +7,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     
     var window: UIWindow?
     
-    var dataSource: ProfileAssetFlowDataSource?
+    /// 保持 dataSource 强引用
+    private var assetFlowDataSource: ProfileAssetFlowDataSource?
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         
@@ -19,9 +20,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             window = UIWindow(frame: UIScreen.main.bounds)
             
             let profileVC = ProfileViewController()
-            let dataSource = ProfileAssetFlowDataSource(scrollManager: profileVC.scrollManager)
-            profileVC.assetFlowDataSource = dataSource
-            profileVC.assetFlowDelegate = dataSource
+            
             let profile = UserProfile(
                 avatar: "",
                 name: "创作者小明",
@@ -32,7 +31,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 likesCount: 98700
             )
             profileVC.configureProfile(profile)
-            self.dataSource = dataSource
+            
+            assetFlowDataSource = ProfileAssetFlowDataSource(scrollManager: profileVC.scrollManager)
+            profileVC.assetFlowDataSource = assetFlowDataSource
+            profileVC.assetFlowDelegate = assetFlowDataSource
             
             let nav = UINavigationController(rootViewController: profileVC)
             nav.setNavigationBarHidden(true, animated: false)

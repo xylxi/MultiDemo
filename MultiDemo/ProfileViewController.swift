@@ -89,14 +89,6 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         return container
     }()
     
-    init() {
-        super.init(nibName: nil, bundle: nil)
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -130,6 +122,7 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         guard let dataSource = assetFlowDataSource else {
             assetFlowConfigs = []
             assetFlowContainer.configure(with: [])
+            updateContentSize()
             return
         }
         
@@ -138,6 +131,11 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         
         let titles = assetFlowConfigs.map { $0.title }
         assetFlowContainer.configure(with: titles)
+        
+        // 刷新后更新 contentSize
+        if isViewLoaded {
+            updateContentSize()
+        }
     }
     
     /// 获取资产流菜单视图（用于自定义样式）
@@ -229,8 +227,15 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
             containerHeightConstraint?.constant = contentHeight + menuHeight
         }
         
-        let totalHeight = headerBarHeight + profileHeaderView.bounds.height + menuHeight + contentHeight
-        mainScrollView.contentSize = CGSize(width: view.bounds.width, height: totalHeight)
+        // 如果没有资产流数据，contentSize 等于视图高度，禁止滚动
+        if assetFlowConfigs.isEmpty {
+            mainScrollView.contentSize = CGSize(width: view.bounds.width, height: view.bounds.height)
+            mainScrollView.isScrollEnabled = false
+        } else {
+            let totalHeight = headerBarHeight + profileHeaderView.bounds.height + menuHeight + contentHeight
+            mainScrollView.contentSize = CGSize(width: view.bounds.width, height: totalHeight)
+            mainScrollView.isScrollEnabled = true
+        }
     }
     
     private func handleScroll(_ scrollView: UIScrollView) {
