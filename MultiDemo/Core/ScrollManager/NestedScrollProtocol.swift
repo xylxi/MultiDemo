@@ -84,9 +84,19 @@ public class NestedScrollManager: NSObject {
     
     public weak var parentController: (UIViewController & NestedScrollParentProtocol)?
     
+    /// 子视图的锁定 offset（切换子视图时保存，用于保持子视图滚动位置）
+    private var lockedOffsets: [ObjectIdentifier: CGFloat] = [:]
+    
     public weak var currentChild: NestedScrollChildProtocol? {
         didSet {
             guard oldValue !== currentChild else { return }
+            
+            // 保存旧子视图的 offset
+            if let oldChild = oldValue {
+                let scrollViewId = ObjectIdentifier(oldChild.childScrollView)
+                let currentOffset = oldChild.childScrollView.contentOffset.y
+                lockedOffsets[scrollViewId] = max(0, currentOffset)
+            }
             
             // 检查是否需要允许新子视图滚动
             if let parent = parentController {
@@ -115,7 +125,10 @@ public class NestedScrollManager: NSObject {
             return
         }
         
-        if offsetY >= maxOffset {
+        // 限制 contentOffset.y 在 [0, maxOffset] 范围内
+        if offsetY < 0 {
+            scrollView.contentOffset.y = 0
+        } else if offsetY >= maxOffset {
             scrollView.contentOffset.y = maxOffset
             parent.canParentScroll = false
             currentChild?.canChildScroll = true
@@ -128,16 +141,58 @@ public class NestedScrollManager: NSObject {
               let child = currentChild else { return }
         
         let offsetY = scrollView.contentOffset.y
+        let scrollViewId = ObjectIdentifier(scrollView)
+        let parentOffset = parent.parentScrollView.contentOffset.y
+        let maxOffset = parent.headerHeight
         
-        if !child.canChildScroll {
-            scrollView.contentOffset.y = 0
+        // 获取锁定的 offset，首次记录当前值
+        let lockedOffset: CGFloat
+        if let saved = lockedOffsets[scrollViewId] {
+            lockedOffset = saved
+        } else {
+            lockedOffset = max(0, offsetY)
+            lockedOffsets[scrollViewId] = lockedOffset
+        }
+        
+        // 判断 parent 位置
+        let parentAtTop = parentOffset <= 0
+        let parentAtMax = parentOffset >= maxOffset - 1
+        
+        // Case 1: parent 在中间位置 (0 < offset < maxOffset)，child 完全锁定
+        if !parentAtTop && !parentAtMax {
+            scrollView.contentOffset.y = lockedOffset
             return
         }
         
-        if offsetY <= 0 {
-            scrollView.contentOffset.y = 0
-            child.canChildScroll = false
-            parent.canParentScroll = true
+        // Case 2: parent 在顶部 (offset == 0)，只允许 child 向下滚动（offset 减少）
+        if parentAtTop && !parentAtMax {
+            if offsetY > lockedOffset {
+                // 用户想向上滚动（增加 offset），锁定 child，让 parent 响应
+                scrollView.contentOffset.y = lockedOffset
+                return
+            }
+            // 允许向下滚动（减少 offset）
+            if offsetY <= 0 {
+                scrollView.contentOffset.y = 0
+                lockedOffsets[scrollViewId] = 0
+            } else {
+                lockedOffsets[scrollViewId] = offsetY
+            }
+            return
+        }
+        
+        // Case 3: parent 在吸顶位置 (offset == maxOffset)，child 可以双向滚动
+        if parentAtMax {
+            if offsetY <= 0 {
+                // child 到顶了，切换到 parent 滚动
+                scrollView.contentOffset.y = 0
+                child.canChildScroll = false
+                parent.canParentScroll = true
+                lockedOffsets[scrollViewId] = 0
+            } else {
+                // 更新锁定值
+                lockedOffsets[scrollViewId] = offsetY
+            }
         }
     }
 }
