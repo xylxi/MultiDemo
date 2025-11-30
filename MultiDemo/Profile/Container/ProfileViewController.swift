@@ -44,13 +44,19 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
     private(set) var scrollManager = NestedScrollManager()
     
     // MARK: - Constants
-    private let headerBarHeight: CGFloat = 88
+    private let navBarContentHeight: CGFloat = 44  // 导航栏内容高度
     private let menuHeight: CGFloat = 48
+    
+    /// 导航栏总高度（安全区域 + 内容高度）
+    private var headerBarHeight: CGFloat {
+        return view.safeAreaInsets.top + navBarContentHeight
+    }
     
     // MARK: - Private Properties
     private var assetFlowConfigs: [AssetFlowConfig] = []
     private var loadedPages: [Int: AssetFlowPageProtocol] = [:]
     private var containerHeightConstraint: NSLayoutConstraint?
+    private var profileHeaderTopConstraint: NSLayoutConstraint?
     private var isFirstLayout = true
     
     // MARK: - UI Components
@@ -106,6 +112,12 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
                 self.setupGestureExclusion()
             }
         }
+    }
+    
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        // 更新 profileHeaderView 的顶部约束以适配安全区域
+        profileHeaderTopConstraint?.constant = headerBarHeight
     }
     
     // MARK: - Public Methods
@@ -170,8 +182,12 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         contentView.addSubview(profileHeaderView)
         profileHeaderView.translatesAutoresizingMaskIntoConstraints = false
         
+        // 初始使用估计值，后续在 viewSafeAreaInsetsDidChange 中更新
+        let estimatedTopInset = UIApplication.shared.windows.first?.safeAreaInsets.top ?? 44
+        profileHeaderTopConstraint = profileHeaderView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: estimatedTopInset + navBarContentHeight)
+        
         NSLayoutConstraint.activate([
-            profileHeaderView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: headerBarHeight),
+            profileHeaderTopConstraint!,
             profileHeaderView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             profileHeaderView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
         ])
@@ -195,7 +211,8 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
             headerBar.topAnchor.constraint(equalTo: view.topAnchor),
             headerBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             headerBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            headerBar.heightAnchor.constraint(equalToConstant: headerBarHeight)
+            // 高度 = 安全区域顶部 + 导航栏内容高度
+            headerBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: navBarContentHeight)
         ])
     }
     

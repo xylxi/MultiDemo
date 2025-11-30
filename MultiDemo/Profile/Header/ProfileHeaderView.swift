@@ -207,6 +207,9 @@ class ProfileHeaderView: UIView {
 
 class ProfileHeaderBar: UIView {
     
+    /// 导航栏内容高度（不含安全区域）
+    private let contentHeight: CGFloat = 44
+    
     private lazy var backgroundView: UIView = {
         let view = UIView()
         view.backgroundColor = .systemBackground
@@ -257,15 +260,17 @@ class ProfileHeaderBar: UIView {
         moreButton.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
+            // 背景覆盖整个区域（包括状态栏）
             backgroundView.topAnchor.constraint(equalTo: topAnchor),
             backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
             backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
             backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
             
+            // 按钮和标题在安全区域内，使用 safeAreaLayoutGuide
             backButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            backButton.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10),
+            backButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
             backButton.widthAnchor.constraint(equalToConstant: 44),
-            backButton.heightAnchor.constraint(equalToConstant: 44),
+            backButton.heightAnchor.constraint(equalToConstant: contentHeight),
             
             titleLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
             titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
@@ -273,7 +278,7 @@ class ProfileHeaderBar: UIView {
             moreButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
             moreButton.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
             moreButton.widthAnchor.constraint(equalToConstant: 44),
-            moreButton.heightAnchor.constraint(equalToConstant: 44)
+            moreButton.heightAnchor.constraint(equalToConstant: contentHeight)
         ])
     }
     
