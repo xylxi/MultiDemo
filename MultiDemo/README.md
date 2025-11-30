@@ -153,8 +153,36 @@ public protocol AssetFlowPageProtocol: UIViewController {
     
     /// 获取内部所有水平滚动的 CollectionView（用于手势排除）
     func getAllHorizontalScrollViews() -> [UIScrollView]
+    
+    // MARK: - 页面生命周期（可选重写）
+    
+    /// 页面即将显示
+    func pageWillAppear()
+    
+    /// 页面已经显示
+    func pageDidAppear()
+    
+    /// 页面即将隐藏
+    func pageWillDisappear()
+    
+    /// 页面已经隐藏
+    func pageDidDisappear()
 }
 ```
+
+**页面生命周期调用时机：**
+
+```
+用户滑动/点击菜单切换页面 A → B
+
+1. A.pageWillDisappear()    ← 开始切换
+2. B.pageWillAppear()       ← 开始切换
+3. 滑动动画进行中...
+4. A.pageDidDisappear()     ← 切换完成
+5. B.pageDidAppear()        ← 切换完成
+```
+
+> 注：生命周期方法有默认空实现，业务按需重写即可。
 
 ### NestedScrollChildProtocol
 

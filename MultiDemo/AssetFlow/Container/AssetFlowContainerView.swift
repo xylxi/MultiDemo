@@ -17,9 +17,11 @@ class AssetFlowContainerView: UIView {
     weak var delegate: AssetFlowContainerDelegate?
     
     private(set) var currentIndex: Int = 0
+    private var previousIndex: Int = 0  // 记录上一个页面索引
     private var pageCount: Int = 0
     private var titles: [String] = []
     private var loadedPages: [Int: AssetFlowPageProtocol] = [:]
+    private var isTransitioning: Bool = false  // 是否正在切换中
     
     /// 菜单视图（外部可访问以自定义）
     let menuView: MenuView = {
@@ -97,22 +99,46 @@ class AssetFlowContainerView: UIView {
     func configure(with titles: [String]) {
         self.titles = titles
         self.pageCount = titles.count
+        self.currentIndex = 0
+        self.previousIndex = 0
         self.loadedPages.removeAll()
+        self.isTransitioning = false
         
         let menuItems = titles.map { MenuItem(title: $0) }
         menuView.configure(with: menuItems)
         
         pageCollectionView.reloadData()
+        
+        // 首次加载时，延迟通知第一个页面显示
+        if pageCount > 0 {
+            DispatchQueue.main.async { [weak self] in
+                self?.notifyPageWillAppear(at: 0)
+                self?.notifyPageDidAppear(at: 0)
+            }
+        }
     }
     
     /// 滚动到指定页面
     func scrollToPage(at index: Int, animated: Bool = true) {
         guard index >= 0 && index < pageCount else { return }
+        guard index != currentIndex else { return }
+        
+        // 通知旧页面即将隐藏
+        notifyPageWillDisappear(at: currentIndex)
+        // 通知新页面即将显示
+        notifyPageWillAppear(at: index)
+        
+        previousIndex = currentIndex
         currentIndex = index
+        isTransitioning = animated
+        
         pageCollectionView.scrollToItem(at: IndexPath(item: index, section: 0), at: .centeredHorizontally, animated: animated)
         menuView.selectItem(at: index, animated: animated)
         
         if !animated {
+            // 无动画时立即触发 did 回调
+            notifyPageDidDisappear(at: previousIndex)
+            notifyPageDidAppear(at: index)
             delegate?.assetFlowContainer(self, didSwitchToIndex: index)
         }
     }
@@ -152,6 +178,24 @@ class AssetFlowContainerView: UIView {
         loadedPages[index] = page
         return page
     }
+    
+    // MARK: - 页面生命周期通知
+    
+    private func notifyPageWillAppear(at index: Int) {
+        loadedPages[index]?.pageWillAppear()
+    }
+    
+    private func notifyPageDidAppear(at index: Int) {
+        loadedPages[index]?.pageDidAppear()
+    }
+    
+    private func notifyPageWillDisappear(at index: Int) {
+        loadedPages[index]?.pageWillDisappear()
+    }
+    
+    private func notifyPageDidDisappear(at index: Int) {
+        loadedPages[index]?.pageDidDisappear()
+    }
 }
 
 // MARK: - MenuViewDelegate
@@ -180,22 +224,59 @@ extension AssetFlowContainerView: UICollectionViewDataSource {
 
 // MARK: - UICollectionViewDelegate
 extension AssetFlowContainerView: UICollectionViewDelegate {
+    
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        // 手势拖拽开始，记录当前索引
+        previousIndex = currentIndex
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard scrollView.bounds.width > 0 else { return }
+        
+        // 计算目标索引
+        let targetIndex = Int(round(scrollView.contentOffset.x / scrollView.bounds.width))
+        
+        // 检测是否开始向新页面过渡
+        if targetIndex != currentIndex && targetIndex >= 0 && targetIndex < pageCount && !isTransitioning {
+            isTransitioning = true
+            
+            // 通知旧页面即将隐藏
+            notifyPageWillDisappear(at: currentIndex)
+            // 通知新页面即将显示
+            notifyPageWillAppear(at: targetIndex)
+        }
+    }
+    
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        updateCurrentIndex(from: scrollView)
+        handleScrollEnd(scrollView)
     }
     
     func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
-        updateCurrentIndex(from: scrollView)
+        handleScrollEnd(scrollView)
     }
     
-    private func updateCurrentIndex(from scrollView: UIScrollView) {
+    private func handleScrollEnd(_ scrollView: UIScrollView) {
         guard scrollView.bounds.width > 0 else { return }
         let index = Int(round(scrollView.contentOffset.x / scrollView.bounds.width))
-        if index != currentIndex && index >= 0 && index < pageCount {
+        
+        if index != previousIndex && index >= 0 && index < pageCount {
+            // 页面确实发生了切换
+            notifyPageDidDisappear(at: previousIndex)
+            notifyPageDidAppear(at: index)
+            
             currentIndex = index
+            previousIndex = index
             menuView.selectItem(at: index)
             delegate?.assetFlowContainer(self, didSwitchToIndex: index)
+        } else if isTransitioning {
+            // 滑动取消，回到原页面
+            notifyPageDidAppear(at: currentIndex)
+            if previousIndex != currentIndex {
+                notifyPageDidDisappear(at: previousIndex)
+            }
         }
+        
+        isTransitioning = false
     }
 }
 

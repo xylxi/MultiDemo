@@ -75,6 +75,23 @@ class AppearanceViewController: UIViewController, AssetFlowPageProtocol {
         print("[AppearanceViewController] viewDidLoad - 出境模块已加载")
     }
     
+    // MARK: - 页面生命周期
+    func pageWillAppear() {
+        print("[AppearanceViewController] pageWillAppear - 出境页面即将显示")
+    }
+    
+    func pageDidAppear() {
+        print("[AppearanceViewController] pageDidAppear - 出境页面已显示")
+    }
+    
+    func pageWillDisappear() {
+        print("[AppearanceViewController] pageWillDisappear - 出境页面即将隐藏")
+    }
+    
+    func pageDidDisappear() {
+        print("[AppearanceViewController] pageDidDisappear - 出境页面已隐藏")
+    }
+    
     private func setupUI() {
         view.backgroundColor = .systemBackground
         

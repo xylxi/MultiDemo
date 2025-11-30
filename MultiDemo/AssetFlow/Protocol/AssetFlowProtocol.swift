@@ -29,6 +29,28 @@ public protocol AssetFlowPageProtocol: UIViewController {
     /// 获取内部所有水平滚动的 CollectionView（用于手势排除）
     /// - Returns: 所有需要排除手势冲突的 CollectionView
     func getAllHorizontalScrollViews() -> [UIScrollView]
+    
+    // MARK: - 页面生命周期
+    
+    /// 页面即将显示（切换到当前页面时调用）
+    func pageWillAppear()
+    
+    /// 页面已经显示
+    func pageDidAppear()
+    
+    /// 页面即将隐藏（切换离开当前页面时调用）
+    func pageWillDisappear()
+    
+    /// 页面已经隐藏
+    func pageDidDisappear()
+}
+
+// MARK: - 页面生命周期默认实现（可选重写）
+public extension AssetFlowPageProtocol {
+    func pageWillAppear() {}
+    func pageDidAppear() {}
+    func pageWillDisappear() {}
+    func pageDidDisappear() {}
 }
 
 // MARK: - 资产流配置

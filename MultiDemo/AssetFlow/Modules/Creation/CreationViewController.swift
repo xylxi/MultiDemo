@@ -108,6 +108,23 @@ class CreationViewController: UIViewController, AssetFlowPageProtocol {
         print("[CreationViewController] viewDidLoad - 创作模块已加载")
     }
     
+    // MARK: - 页面生命周期
+    func pageWillAppear() {
+        print("[CreationViewController] pageWillAppear - 创作页面即将显示")
+    }
+    
+    func pageDidAppear() {
+        print("[CreationViewController] pageDidAppear - 创作页面已显示")
+    }
+    
+    func pageWillDisappear() {
+        print("[CreationViewController] pageWillDisappear - 创作页面即将隐藏")
+    }
+    
+    func pageDidDisappear() {
+        print("[CreationViewController] pageDidDisappear - 创作页面已隐藏")
+    }
+    
     private func setupUI() {
         view.backgroundColor = .systemBackground
         
