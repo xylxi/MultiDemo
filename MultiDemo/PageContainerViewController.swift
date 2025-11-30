@@ -14,6 +14,11 @@ class PageContainerViewController: UIViewController {
     private(set) var currentIndex: Int = 0
     private var childControllers: [UIViewController] = []
     
+    /// 暴露 collectionView 用于手势排除
+    var pageCollectionView: UICollectionView {
+        return collectionView
+    }
+    
     private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
@@ -50,7 +55,6 @@ class PageContainerViewController: UIViewController {
     }
     
     func configure(with controllers: [UIViewController]) {
-        // 移除旧的子控制器
         childControllers.forEach { child in
             child.willMove(toParent: nil)
             child.removeFromParent()
@@ -58,7 +62,6 @@ class PageContainerViewController: UIViewController {
         
         childControllers = controllers
         
-        // 添加新的子控制器
         controllers.forEach { child in
             addChild(child)
             child.didMove(toParent: self)
@@ -75,6 +78,21 @@ class PageContainerViewController: UIViewController {
         if !animated {
             delegate?.pageContainer(self, didScrollToIndex: index)
         }
+    }
+    
+    /// 获取所有嵌套的 PageContainerViewController 的 collectionView
+    func getAllPageCollectionViews() -> [UICollectionView] {
+        var views = [collectionView]
+        
+        for child in childControllers {
+            if let categoryVC = child as? CategoryContainerViewController {
+                if let nestedViews = categoryVC.getAllPageCollectionViews() {
+                    views.append(contentsOf: nestedViews)
+                }
+            }
+        }
+        
+        return views
     }
 }
 
@@ -125,11 +143,9 @@ class PageContainerCell: UICollectionViewCell {
     
     override func prepareForReuse() {
         super.prepareForReuse()
-        // 不移除 contentView，因为它被 ViewController 持有
     }
     
     func configure(with contentView: UIView) {
-        // 如果已经是同一个 view，不需要重新添加
         if currentContentView === contentView {
             return
         }

@@ -1,15 +1,5 @@
 import UIKit
 
-// MARK: - 支持同时识别手势的 ScrollView
-class NestedParentScrollView: UIScrollView, UIGestureRecognizerDelegate {
-    
-    /// 允许同时识别多个手势
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, 
-                          shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        return true
-    }
-}
-
 // MARK: - ProfileViewController
 class ProfileViewController: UIViewController, NestedScrollParentProtocol {
     
@@ -77,14 +67,10 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         return bar
     }()
     
-    // 使用自定义的支持同时识别手势的 ScrollView
     private lazy var mainScrollView: NestedParentScrollView = {
         let sv = NestedParentScrollView()
         sv.delegate = self
-        sv.showsVerticalScrollIndicator = false
         sv.contentInsetAdjustmentBehavior = .never
-        sv.bounces = true
-        sv.alwaysBounceVertical = true
         return sv
     }()
     
@@ -110,7 +96,7 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         let container = CategoryContainerViewController(
             categories: categories,
             categoryPath: "",
-            showMenu: false // 一级菜单由 stickyMenuView 负责
+            showMenu: false
         )
         container.scrollManager = scrollManager
         container.containerDelegate = self
@@ -140,10 +126,10 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         super.viewDidLayoutSubviews()
         updateContentSize()
         
-        // 首次布局完成后，初始化当前子视图
         if isFirstLayout && profileHeaderView.bounds.height > 0 {
             isFirstLayout = false
             DispatchQueue.main.async {
+                self.setupGestureExclusion()
                 self.categoryContainer.updateCurrentChild()
             }
         }
@@ -154,7 +140,6 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         view.backgroundColor = .systemBackground
         navigationController?.setNavigationBarHidden(true, animated: false)
         
-        // Main ScrollView
         view.addSubview(mainScrollView)
         mainScrollView.addSubview(contentView)
         
@@ -173,7 +158,6 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
             contentView.widthAnchor.constraint(equalTo: mainScrollView.widthAnchor)
         ])
         
-        // Profile Header
         contentView.addSubview(profileHeaderView)
         profileHeaderView.translatesAutoresizingMaskIntoConstraints = false
         
@@ -183,7 +167,6 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
             profileHeaderView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
         ])
         
-        // Sticky Menu
         contentView.addSubview(stickyMenuView)
         stickyMenuView.translatesAutoresizingMaskIntoConstraints = false
         
@@ -194,7 +177,6 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
             stickyMenuView.heightAnchor.constraint(equalToConstant: menuHeight)
         ])
         
-        // Category Container
         addChild(categoryContainer)
         contentView.addSubview(categoryContainer.view)
         categoryContainer.didMove(toParent: self)
@@ -208,7 +190,6 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
             categoryContainer.view.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
         
-        // Header Bar (最上层)
         view.addSubview(headerBar)
         headerBar.translatesAutoresizingMaskIntoConstraints = false
         
@@ -229,6 +210,15 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         stickyMenuView.configure(with: menuItems)
     }
     
+    /// 设置手势排除，将所有水平滚动的 PageCollectionView 添加到排除列表
+    private func setupGestureExclusion() {
+        if let pageCollectionViews = categoryContainer.getAllPageCollectionViews() {
+            for collectionView in pageCollectionViews {
+                mainScrollView.addExcludeSuperView(collectionView)
+            }
+        }
+    }
+    
     private func updateContentSize() {
         let contentHeight = view.bounds.height - headerBarHeight - menuHeight
         
@@ -243,19 +233,15 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         mainScrollView.contentSize = CGSize(width: view.bounds.width, height: totalHeight)
     }
     
-    // MARK: - Scroll Handling
     private func handleScroll(_ scrollView: UIScrollView) {
         let offsetY = scrollView.contentOffset.y
         
-        // 计算 HeaderBar 背景透明度
         let avatarBottomY = profileHeaderView.avatarBottomY + headerBarHeight
         let headerBarProgress = min(1, max(0, offsetY / avatarBottomY))
         headerBar.updateAppearance(progress: headerBarProgress)
         
-        // 使用 scrollManager 处理嵌套滚动
         scrollManager.handleParentScroll(scrollView)
         
-        // 更新吸顶菜单位置
         updateStickyMenuPosition(offsetY: min(offsetY, profileHeaderView.bounds.height))
     }
     
@@ -263,7 +249,6 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         let stickyPoint = profileHeaderView.bounds.height
         
         if offsetY >= stickyPoint {
-            // 菜单吸顶
             stickyMenuView.transform = CGAffineTransform(translationX: 0, y: offsetY - stickyPoint)
         } else {
             stickyMenuView.transform = .identity
@@ -290,7 +275,6 @@ extension ProfileViewController: MenuViewDelegate {
 // MARK: - CategoryContainerDelegate
 extension ProfileViewController: CategoryContainerDelegate {
     func categoryContainerDidChangeSelection(_ container: CategoryContainerViewController) {
-        // 更新当前滚动子视图
         categoryContainer.updateCurrentChild()
     }
 }

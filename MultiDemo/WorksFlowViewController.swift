@@ -1,17 +1,5 @@
 import UIKit
 
-// MARK: - 支持同时识别手势的 CollectionView
-class NestedChildCollectionView: UICollectionView, UIGestureRecognizerDelegate {
-    
-    /// 允许同时识别多个手势
-    func gestureRecognizer(
-        _ gestureRecognizer: UIGestureRecognizer,
-        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
-    ) -> Bool {
-        return true
-    }
-}
-
 // MARK: - 作品流 ViewController
 class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
     
@@ -25,13 +13,13 @@ class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
     weak var scrollManager: NestedScrollManager?
     
     // MARK: - UI
-    private lazy var collectionView: NestedChildCollectionView = {
+    private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.minimumInteritemSpacing = 2
         layout.minimumLineSpacing = 2
         layout.sectionInset = UIEdgeInsets(top: 2, left: 2, bottom: 2, right: 2)
         
-        let cv = NestedChildCollectionView(frame: .zero, collectionViewLayout: layout)
+        let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .systemBackground
         cv.delegate = self
         cv.dataSource = self
@@ -72,7 +60,6 @@ class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
         ])
     }
     
-    /// 重置滚动位置
     func resetScrollPosition() {
         collectionView.setContentOffset(.zero, animated: false)
         canChildScroll = false
@@ -82,7 +69,7 @@ class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
 // MARK: - UICollectionViewDataSource
 extension WorksFlowViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 100 // Mock 30 个作品
+        return 30
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {

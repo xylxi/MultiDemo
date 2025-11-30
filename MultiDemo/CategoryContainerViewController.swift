@@ -105,7 +105,6 @@ class CategoryContainerViewController: UIViewController {
             let path = categoryPath.isEmpty ? category.title : "\(categoryPath) > \(category.title)"
             
             if let subCategories = category.subCategories {
-                // 有子分类，创建嵌套的分类容器
                 let container = CategoryContainerViewController(
                     categories: subCategories,
                     categoryPath: path,
@@ -115,7 +114,6 @@ class CategoryContainerViewController: UIViewController {
                 container.containerDelegate = self
                 return container
             } else {
-                // 叶子节点，创建作品流
                 let worksVC = WorksFlowViewController(categoryPath: path, color: category.color)
                 worksVC.scrollManager = scrollManager
                 return worksVC
@@ -125,31 +123,20 @@ class CategoryContainerViewController: UIViewController {
         pageContainer?.configure(with: childControllers)
     }
     
-    /// 更新当前子视图到 scrollManager
     func updateCurrentChild() {
-        guard let pageContainer = pageContainer else {
-            print("[CategoryContainer] pageContainer is nil")
-            return
-        }
+        guard let pageContainer = pageContainer else { return }
         
         let index = pageContainer.currentIndex
-        guard index < childControllers.count else {
-            print("[CategoryContainer] index out of bounds: \(index) >= \(childControllers.count)")
-            return
-        }
+        guard index < childControllers.count else { return }
         
         let currentVC = childControllers[index]
         
         if let child = currentVC as? NestedScrollChildProtocol {
-            print("[CategoryContainer] Setting currentChild to WorksFlowVC")
             scrollManager?.currentChild = child
         } else if let container = currentVC as? CategoryContainerViewController {
-            print("[CategoryContainer] Forwarding to nested CategoryContainer")
-            // 确保嵌套容器的 view 已加载
             if container.isViewLoaded {
                 container.updateCurrentChild()
             } else {
-                // 触发 view 加载
                 _ = container.view
                 DispatchQueue.main.async {
                     container.updateCurrentChild()
@@ -163,7 +150,12 @@ class CategoryContainerViewController: UIViewController {
         menuView.selectItem(at: index, animated: animated)
     }
     
-    /// 获取当前激活的作品流控制器
+    /// 获取所有嵌套的 PageCollectionView
+    func getAllPageCollectionViews() -> [UICollectionView]? {
+        guard let pageContainer = pageContainer else { return nil }
+        return pageContainer.getAllPageCollectionViews()
+    }
+    
     func getCurrentWorksFlowVC() -> WorksFlowViewController? {
         guard let pageContainer = pageContainer else { return nil }
         
