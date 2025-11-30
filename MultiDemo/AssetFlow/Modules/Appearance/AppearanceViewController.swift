@@ -1,4 +1,5 @@
 import UIKit
+import SnapKit
 
 // MARK: - ================== 出境模块 ==================
 // 负责人：开发者 A
@@ -98,20 +99,15 @@ class AppearanceViewController: UIViewController, AssetFlowPageProtocol {
         view.addSubview(menuView)
         view.addSubview(pageCollectionView)
         
-        menuView.translatesAutoresizingMaskIntoConstraints = false
-        pageCollectionView.translatesAutoresizingMaskIntoConstraints = false
+        menuView.snp.makeConstraints { make in
+            make.top.leading.trailing.equalToSuperview()
+            make.height.equalTo(44)
+        }
         
-        NSLayoutConstraint.activate([
-            menuView.topAnchor.constraint(equalTo: view.topAnchor),
-            menuView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            menuView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            menuView.heightAnchor.constraint(equalToConstant: 44),
-            
-            pageCollectionView.topAnchor.constraint(equalTo: menuView.bottomAnchor),
-            pageCollectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            pageCollectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            pageCollectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
+        pageCollectionView.snp.makeConstraints { make in
+            make.top.equalTo(menuView.snp.bottom)
+            make.leading.trailing.bottom.equalToSuperview()
+        }
     }
     
     private func setupMenu() {
@@ -216,13 +212,9 @@ private class PageCell: UICollectionViewCell {
         currentContentView = contentView
         
         self.contentView.addSubview(contentView)
-        contentView.translatesAutoresizingMaskIntoConstraints = false
         
-        NSLayoutConstraint.activate([
-            contentView.topAnchor.constraint(equalTo: self.contentView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: self.contentView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: self.contentView.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: self.contentView.bottomAnchor)
-        ])
+        contentView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
     }
 }

@@ -1,4 +1,5 @@
 import UIKit
+import SnapKit
 
 // MARK: - ================== 个人页面容器 ==================
 
@@ -55,8 +56,8 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
     // MARK: - Private Properties
     private var assetFlowConfigs: [AssetFlowConfig] = []
     private var loadedPages: [Int: AssetFlowPageProtocol] = [:]
-    private var containerHeightConstraint: NSLayoutConstraint?
-    private var profileHeaderTopConstraint: NSLayoutConstraint?
+    private var containerHeightConstraint: Constraint?
+    private var profileHeaderTopConstraint: Constraint?
     private var isFirstLayout = true
     
     // MARK: - UI Components
@@ -117,7 +118,7 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
     override func viewSafeAreaInsetsDidChange() {
         super.viewSafeAreaInsetsDidChange()
         // 更新 profileHeaderView 的顶部约束以适配安全区域
-        profileHeaderTopConstraint?.constant = headerBarHeight
+        profileHeaderTopConstraint?.update(offset: headerBarHeight)
     }
     
     // MARK: - Public Methods
@@ -163,57 +164,42 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         view.addSubview(mainScrollView)
         mainScrollView.addSubview(contentView)
         
-        mainScrollView.translatesAutoresizingMaskIntoConstraints = false
-        contentView.translatesAutoresizingMaskIntoConstraints = false
+        mainScrollView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
         
-        NSLayoutConstraint.activate([
-            mainScrollView.topAnchor.constraint(equalTo: view.topAnchor),
-            mainScrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            mainScrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            mainScrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            
-            contentView.topAnchor.constraint(equalTo: mainScrollView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: mainScrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: mainScrollView.trailingAnchor),
-            contentView.widthAnchor.constraint(equalTo: mainScrollView.widthAnchor)
-        ])
+        contentView.snp.makeConstraints { make in
+            make.top.leading.trailing.equalToSuperview()
+            make.width.equalToSuperview()
+        }
         
         // 用户信息头部
         contentView.addSubview(profileHeaderView)
-        profileHeaderView.translatesAutoresizingMaskIntoConstraints = false
         
         // 初始使用估计值，后续在 viewSafeAreaInsetsDidChange 中更新
         let estimatedTopInset = UIApplication.shared.windows.first?.safeAreaInsets.top ?? 44
-        profileHeaderTopConstraint = profileHeaderView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: estimatedTopInset + navBarContentHeight)
         
-        NSLayoutConstraint.activate([
-            profileHeaderTopConstraint!,
-            profileHeaderView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            profileHeaderView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
-        ])
+        profileHeaderView.snp.makeConstraints { make in
+            profileHeaderTopConstraint = make.top.equalToSuperview().offset(estimatedTopInset + navBarContentHeight).constraint
+            make.leading.trailing.equalToSuperview()
+        }
         
         // 资产流容器
         contentView.addSubview(assetFlowContainer)
-        assetFlowContainer.translatesAutoresizingMaskIntoConstraints = false
         
-        NSLayoutConstraint.activate([
-            assetFlowContainer.topAnchor.constraint(equalTo: profileHeaderView.bottomAnchor),
-            assetFlowContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            assetFlowContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            assetFlowContainer.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
-        ])
+        assetFlowContainer.snp.makeConstraints { make in
+            make.top.equalTo(profileHeaderView.snp.bottom)
+            make.leading.trailing.bottom.equalToSuperview()
+        }
         
         // 顶部导航栏（最上层）
         view.addSubview(headerBar)
-        headerBar.translatesAutoresizingMaskIntoConstraints = false
         
-        NSLayoutConstraint.activate([
-            headerBar.topAnchor.constraint(equalTo: view.topAnchor),
-            headerBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            headerBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+        headerBar.snp.makeConstraints { make in
+            make.top.leading.trailing.equalToSuperview()
             // 高度 = 安全区域顶部 + 导航栏内容高度
-            headerBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: navBarContentHeight)
-        ])
+            make.bottom.equalTo(view.safeAreaLayoutGuide.snp.top).offset(navBarContentHeight)
+        }
     }
     
     private func setupScrollManager() {
@@ -237,10 +223,11 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         let contentHeight = view.bounds.height - headerBarHeight - menuHeight
         
         if containerHeightConstraint == nil {
-            containerHeightConstraint = assetFlowContainer.heightAnchor.constraint(equalToConstant: contentHeight + menuHeight)
-            containerHeightConstraint?.isActive = true
+            assetFlowContainer.snp.makeConstraints { make in
+                containerHeightConstraint = make.height.equalTo(contentHeight + menuHeight).constraint
+            }
         } else {
-            containerHeightConstraint?.constant = contentHeight + menuHeight
+            containerHeightConstraint?.update(offset: contentHeight + menuHeight)
         }
         
         // 如果没有资产流数据，contentSize 等于视图高度，禁止滚动

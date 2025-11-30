@@ -1,4 +1,5 @@
 import UIKit
+import SnapKit
 
 // MARK: - ================== 资产流容器 ==================
 
@@ -51,11 +52,11 @@ class AssetFlowContainerView: UIView {
     /// 菜单高度
     var menuHeight: CGFloat = 48 {
         didSet {
-            menuHeightConstraint?.constant = menuHeight
+            menuHeightConstraint?.update(offset: menuHeight)
         }
     }
     
-    private var menuHeightConstraint: NSLayoutConstraint?
+    private var menuHeightConstraint: Constraint?
     
     // MARK: - Init
     override init(frame: CGRect) {
@@ -73,22 +74,15 @@ class AssetFlowContainerView: UIView {
         addSubview(menuView)
         addSubview(pageCollectionView)
         
-        menuView.translatesAutoresizingMaskIntoConstraints = false
-        pageCollectionView.translatesAutoresizingMaskIntoConstraints = false
+        menuView.snp.makeConstraints { make in
+            make.top.leading.trailing.equalToSuperview()
+            menuHeightConstraint = make.height.equalTo(menuHeight).constraint
+        }
         
-        menuHeightConstraint = menuView.heightAnchor.constraint(equalToConstant: menuHeight)
-        
-        NSLayoutConstraint.activate([
-            menuView.topAnchor.constraint(equalTo: topAnchor),
-            menuView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            menuView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            menuHeightConstraint!,
-            
-            pageCollectionView.topAnchor.constraint(equalTo: menuView.bottomAnchor),
-            pageCollectionView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            pageCollectionView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            pageCollectionView.bottomAnchor.constraint(equalTo: bottomAnchor)
-        ])
+        pageCollectionView.snp.makeConstraints { make in
+            make.top.equalTo(menuView.snp.bottom)
+            make.leading.trailing.bottom.equalToSuperview()
+        }
         
         menuView.delegate = self
     }
@@ -302,13 +296,9 @@ private class AssetFlowPageCell: UICollectionViewCell {
         currentContentView = contentView
         
         self.contentView.addSubview(contentView)
-        contentView.translatesAutoresizingMaskIntoConstraints = false
         
-        NSLayoutConstraint.activate([
-            contentView.topAnchor.constraint(equalTo: self.contentView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: self.contentView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: self.contentView.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: self.contentView.bottomAnchor)
-        ])
+        contentView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
     }
 }

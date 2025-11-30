@@ -1,4 +1,5 @@
 import UIKit
+import SnapKit
 
 // MARK: - ================== 用户信息头部 ==================
 
@@ -97,43 +98,45 @@ class ProfileHeaderView: UIView {
         addSubview(statsStackView)
         addSubview(editButton)
         
-        avatarView.translatesAutoresizingMaskIntoConstraints = false
-        avatarLabel.translatesAutoresizingMaskIntoConstraints = false
-        nameLabel.translatesAutoresizingMaskIntoConstraints = false
-        userIdLabel.translatesAutoresizingMaskIntoConstraints = false
-        bioLabel.translatesAutoresizingMaskIntoConstraints = false
-        statsStackView.translatesAutoresizingMaskIntoConstraints = false
-        editButton.translatesAutoresizingMaskIntoConstraints = false
+        avatarView.snp.makeConstraints { make in
+            make.top.equalToSuperview().offset(16)
+            make.centerX.equalToSuperview()
+            make.size.equalTo(80)
+        }
         
-        NSLayoutConstraint.activate([
-            avatarView.topAnchor.constraint(equalTo: topAnchor, constant: 16),
-            avatarView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            avatarView.widthAnchor.constraint(equalToConstant: 80),
-            avatarView.heightAnchor.constraint(equalToConstant: 80),
-            
-            avatarLabel.centerXAnchor.constraint(equalTo: avatarView.centerXAnchor),
-            avatarLabel.centerYAnchor.constraint(equalTo: avatarView.centerYAnchor),
-            
-            nameLabel.topAnchor.constraint(equalTo: avatarView.bottomAnchor, constant: 12),
-            nameLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
-            
-            userIdLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 4),
-            userIdLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
-            
-            bioLabel.topAnchor.constraint(equalTo: userIdLabel.bottomAnchor, constant: 12),
-            bioLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 32),
-            bioLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -32),
-            
-            statsStackView.topAnchor.constraint(equalTo: bioLabel.bottomAnchor, constant: 16),
-            statsStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 48),
-            statsStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -48),
-            
-            editButton.topAnchor.constraint(equalTo: statsStackView.bottomAnchor, constant: 16),
-            editButton.centerXAnchor.constraint(equalTo: centerXAnchor),
-            editButton.widthAnchor.constraint(equalToConstant: 120),
-            editButton.heightAnchor.constraint(equalToConstant: 32),
-            editButton.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -16)
-        ])
+        avatarLabel.snp.makeConstraints { make in
+            make.center.equalToSuperview()
+        }
+        
+        nameLabel.snp.makeConstraints { make in
+            make.top.equalTo(avatarView.snp.bottom).offset(12)
+            make.centerX.equalToSuperview()
+        }
+        
+        userIdLabel.snp.makeConstraints { make in
+            make.top.equalTo(nameLabel.snp.bottom).offset(4)
+            make.centerX.equalToSuperview()
+        }
+        
+        bioLabel.snp.makeConstraints { make in
+            make.top.equalTo(userIdLabel.snp.bottom).offset(12)
+            make.leading.equalToSuperview().offset(32)
+            make.trailing.equalToSuperview().offset(-32)
+        }
+        
+        statsStackView.snp.makeConstraints { make in
+            make.top.equalTo(bioLabel.snp.bottom).offset(16)
+            make.leading.equalToSuperview().offset(48)
+            make.trailing.equalToSuperview().offset(-48)
+        }
+        
+        editButton.snp.makeConstraints { make in
+            make.top.equalTo(statsStackView.snp.bottom).offset(16)
+            make.centerX.equalToSuperview()
+            make.width.equalTo(120)
+            make.height.equalTo(32)
+            make.bottom.equalToSuperview().offset(-16)
+        }
     }
     
     func configure(with profile: UserProfile) {
@@ -176,19 +179,20 @@ class ProfileHeaderView: UIView {
         container.addSubview(countLabel)
         container.addSubview(titleLabel)
         
-        countLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        countLabel.snp.makeConstraints { make in
+            make.top.equalToSuperview()
+            make.centerX.equalToSuperview()
+        }
         
-        NSLayoutConstraint.activate([
-            countLabel.topAnchor.constraint(equalTo: container.topAnchor),
-            countLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            
-            titleLabel.topAnchor.constraint(equalTo: countLabel.bottomAnchor, constant: 2),
-            titleLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            titleLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            
-            container.widthAnchor.constraint(greaterThanOrEqualToConstant: 60)
-        ])
+        titleLabel.snp.makeConstraints { make in
+            make.top.equalTo(countLabel.snp.bottom).offset(2)
+            make.centerX.equalToSuperview()
+            make.bottom.equalToSuperview()
+        }
+        
+        container.snp.makeConstraints { make in
+            make.width.greaterThanOrEqualTo(60)
+        }
         
         return container
     }
@@ -254,32 +258,28 @@ class ProfileHeaderBar: UIView {
         addSubview(titleLabel)
         addSubview(moreButton)
         
-        backgroundView.translatesAutoresizingMaskIntoConstraints = false
-        backButton.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        moreButton.translatesAutoresizingMaskIntoConstraints = false
+        // 背景覆盖整个区域（包括状态栏）
+        backgroundView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
         
-        NSLayoutConstraint.activate([
-            // 背景覆盖整个区域（包括状态栏）
-            backgroundView.topAnchor.constraint(equalTo: topAnchor),
-            backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            
-            // 按钮和标题在安全区域内，使用 safeAreaLayoutGuide
-            backButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            backButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
-            backButton.widthAnchor.constraint(equalToConstant: 44),
-            backButton.heightAnchor.constraint(equalToConstant: contentHeight),
-            
-            titleLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
-            titleLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
-            
-            moreButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            moreButton.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
-            moreButton.widthAnchor.constraint(equalToConstant: 44),
-            moreButton.heightAnchor.constraint(equalToConstant: contentHeight)
-        ])
+        // 按钮和标题在安全区域内
+        backButton.snp.makeConstraints { make in
+            make.leading.equalToSuperview().offset(16)
+            make.top.equalTo(safeAreaLayoutGuide.snp.top)
+            make.size.equalTo(CGSize(width: 44, height: contentHeight))
+        }
+        
+        titleLabel.snp.makeConstraints { make in
+            make.centerX.equalToSuperview()
+            make.centerY.equalTo(backButton)
+        }
+        
+        moreButton.snp.makeConstraints { make in
+            make.trailing.equalToSuperview().offset(-16)
+            make.centerY.equalTo(backButton)
+            make.size.equalTo(CGSize(width: 44, height: contentHeight))
+        }
     }
     
     func configure(title: String) {

@@ -1,4 +1,5 @@
 import UIKit
+import SnapKit
 
 // MARK: - ================== 菜单组件 ==================
 
@@ -42,8 +43,7 @@ class MenuView: UIView {
         return view
     }()
     
-    private var indicatorCenterXConstraint: NSLayoutConstraint?
-    private var indicatorWidthConstraint: NSLayoutConstraint?
+    private var indicatorCenterXConstraint: Constraint?
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -60,18 +60,18 @@ class MenuView: UIView {
         addSubview(stackView)
         addSubview(indicatorView)
         
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        indicatorView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.snp.makeConstraints { make in
+            make.top.equalToSuperview()
+            make.leading.equalToSuperview().offset(16)
+            make.trailing.equalToSuperview().offset(-16)
+            make.bottom.equalToSuperview().offset(-4)
+        }
         
-        NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            stackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            stackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
-            
-            indicatorView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
-            indicatorView.heightAnchor.constraint(equalToConstant: 3)
-        ])
+        indicatorView.snp.makeConstraints { make in
+            make.bottom.equalToSuperview().offset(-2)
+            make.height.equalTo(3)
+            make.width.equalTo(24)
+        }
     }
     
     func configure(with items: [MenuItem]) {
@@ -133,14 +133,12 @@ class MenuView: UIView {
         // 更新指示器位置
         let selectedButton = buttons[index]
         
-        indicatorCenterXConstraint?.isActive = false
-        indicatorWidthConstraint?.isActive = false
-        
-        indicatorCenterXConstraint = indicatorView.centerXAnchor.constraint(equalTo: selectedButton.centerXAnchor)
-        indicatorWidthConstraint = indicatorView.widthAnchor.constraint(equalToConstant: 24)
-        
-        indicatorCenterXConstraint?.isActive = true
-        indicatorWidthConstraint?.isActive = true
+        indicatorView.snp.remakeConstraints { make in
+            make.bottom.equalToSuperview().offset(-2)
+            make.height.equalTo(3)
+            make.width.equalTo(24)
+            make.centerX.equalTo(selectedButton)
+        }
         
         if animated {
             UIView.animate(withDuration: 0.25) {
