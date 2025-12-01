@@ -48,6 +48,11 @@ class ProfileAssetFlowDataSource: AssetFlowDataSource, AssetFlowDelegate {
             // 创作模块 - 由开发者 B 开发
             AssetFlowConfig(title: "创作") {
                 return CreationViewController()
+            },
+            
+            // 互动模块 - 由开发者 C 开发
+            AssetFlowConfig(title: "互动") {
+                return InteractionViewController()
             }
             
             // 可以继续添加更多模块...
