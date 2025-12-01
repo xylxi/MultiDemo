@@ -248,6 +248,12 @@ profileVC.assetFlowDataSource = MyAssetFlowDataSource()
 - 如果索引超出范围，会自动调整为有效范围内的值
 - 默认值为 0（第一个模块）
 
+**性能优化：**
+- 当设置 `defaultAssetFlowIndex > 0` 时，框架会优化加载策略，避免预加载第一个模块：
+  - 禁用 UICollectionView 的预加载机制（iOS 10+）
+  - 延迟加载非初始索引的页面，只在滚动到对应位置时才加载
+  - 这样可以减少不必要的页面初始化，提升启动性能
+
 ## 新增资产流模块
 
 1. 在 `AssetFlow/Modules/` 下创建新目录

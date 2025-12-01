@@ -23,6 +23,8 @@ class AssetFlowContainerView: UIView {
     private var titles: [String] = []
     private var loadedPages: [Int: AssetFlowPageProtocol] = [:]
     private var isTransitioning: Bool = false  // 是否正在切换中
+    private var initialIndex: Int = 0  // 记录初始索引，用于延迟加载优化
+    private var hasPerformedInitialScroll: Bool = false  // 是否已完成初始滚动
     
     /// 菜单视图（外部可访问以自定义）
     let menuView: MenuView = {
@@ -46,6 +48,10 @@ class AssetFlowContainerView: UIView {
         cv.dataSource = self
         cv.register(AssetFlowPageCell.self, forCellWithReuseIdentifier: AssetFlowPageCell.reuseId)
         cv.contentInsetAdjustmentBehavior = .never
+        // 禁用预加载，避免不必要的页面初始化
+        if #available(iOS 10.0, *) {
+            cv.isPrefetchingEnabled = false
+        }
         return cv
     }()
     
@@ -101,8 +107,10 @@ class AssetFlowContainerView: UIView {
         let validInitialIndex = max(0, min(initialIndex, titles.count > 0 ? titles.count - 1 : 0))
         self.currentIndex = validInitialIndex
         self.previousIndex = validInitialIndex
+        self.initialIndex = validInitialIndex
         self.loadedPages.removeAll()
         self.isTransitioning = false
+        self.hasPerformedInitialScroll = false
         
         let menuItems = titles.map { MenuItem(title: $0) }
         menuView.configure(with: menuItems)
@@ -121,11 +129,19 @@ class AssetFlowContainerView: UIView {
                 // 确保 CollectionView 已经完成布局
                 self.pageCollectionView.layoutIfNeeded()
                 
-                // 如果初始索引不是 0，需要滚动到指定位置
+                // 如果初始索引不是 0，先设置 contentOffset 避免预加载第一个页面
+                // 然后再滚动到指定位置
                 if validInitialIndex > 0 {
+                    let offsetX = CGFloat(validInitialIndex) * self.pageCollectionView.bounds.width
+                    self.pageCollectionView.contentOffset = CGPoint(x: offsetX, y: 0)
+                    
+                    // 确保滚动到正确位置
                     let indexPath = IndexPath(item: validInitialIndex, section: 0)
                     self.pageCollectionView.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: false)
                 }
+                
+                // 标记已完成初始滚动
+                self.hasPerformedInitialScroll = true
                 
                 // 通知初始页面显示
                 self.notifyPageWillAppear(at: validInitialIndex)
@@ -233,11 +249,47 @@ extension AssetFlowContainerView: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: AssetFlowPageCell.reuseId, for: indexPath) as! AssetFlowPageCell
         
-        if let page = loadPage(at: indexPath.item) {
+        let index = indexPath.item
+        
+        // cellForItemAt 只负责创建和配置 cell
+        // 如果页面已加载，直接配置；否则配置空视图，等待 willDisplay 时加载
+        if let page = loadedPages[index] {
             cell.configure(with: page.view)
+        } else {
+            // 先配置一个空视图占位，避免视觉闪烁
+            // 实际的页面加载将在 willDisplay 中进行
+            cell.configure(with: UIView())
         }
         
         return cell
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        let index = indexPath.item
+        
+        // willDisplay 是 cell 真正要显示时调用，这是加载页面的合适时机
+        // 根据文档建议，使用 willDisplay 来更新 cell 的视觉状态
+        
+        // 如果页面还未加载，则加载它
+        if loadedPages[index] == nil {
+            // 延迟加载优化：如果设置了初始索引且还未完成初始滚动
+            // 在初始滚动完成前，只加载初始索引的页面，避免预加载其他页面
+            let shouldLoad = hasPerformedInitialScroll || initialIndex == 0 || index == initialIndex
+            
+            if shouldLoad {
+                if let page = loadPage(at: index),
+                   let pageCell = cell as? AssetFlowPageCell {
+                    pageCell.configure(with: page.view)
+                }
+            }
+            // 如果 shouldLoad == false，说明是初始滚动前的非初始索引页面，不加载
+        } else {
+            // 页面已加载，确保 cell 配置正确
+            if let page = loadedPages[index],
+               let pageCell = cell as? AssetFlowPageCell {
+                pageCell.configure(with: page.view)
+            }
+        }
     }
 }
 
