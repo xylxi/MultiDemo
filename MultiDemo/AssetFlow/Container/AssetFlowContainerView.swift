@@ -90,24 +90,49 @@ class AssetFlowContainerView: UIView {
     // MARK: - Public Methods
     
     /// 配置资产流（设置标题和数量，不立即创建页面）
-    func configure(with titles: [String]) {
+    /// - Parameters:
+    ///   - titles: 资产流标题数组
+    ///   - initialIndex: 初始定位的索引（默认为 0）
+    func configure(with titles: [String], initialIndex: Int = 0) {
         self.titles = titles
         self.pageCount = titles.count
-        self.currentIndex = 0
-        self.previousIndex = 0
+        
+        // 确保初始索引在有效范围内
+        let validInitialIndex = max(0, min(initialIndex, titles.count > 0 ? titles.count - 1 : 0))
+        self.currentIndex = validInitialIndex
+        self.previousIndex = validInitialIndex
         self.loadedPages.removeAll()
         self.isTransitioning = false
         
         let menuItems = titles.map { MenuItem(title: $0) }
         menuView.configure(with: menuItems)
         
+        // 设置菜单选中项到初始索引
+        if pageCount > 0 {
+            menuView.selectItem(at: validInitialIndex, animated: false)
+        }
+        
         pageCollectionView.reloadData()
         
-        // 首次加载时，延迟通知第一个页面显示
+        // 滚动到初始索引位置（需要在布局完成后执行）
         if pageCount > 0 {
             DispatchQueue.main.async { [weak self] in
-                self?.notifyPageWillAppear(at: 0)
-                self?.notifyPageDidAppear(at: 0)
+                guard let self = self else { return }
+                // 确保 CollectionView 已经完成布局
+                self.pageCollectionView.layoutIfNeeded()
+                
+                // 如果初始索引不是 0，需要滚动到指定位置
+                if validInitialIndex > 0 {
+                    let indexPath = IndexPath(item: validInitialIndex, section: 0)
+                    self.pageCollectionView.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: false)
+                }
+                
+                // 通知初始页面显示
+                self.notifyPageWillAppear(at: validInitialIndex)
+                self.notifyPageDidAppear(at: validInitialIndex)
+                
+                // 通知 delegate 初始索引已设置
+                self.delegate?.assetFlowContainer(self, didSwitchToIndex: validInitialIndex)
             }
         }
     }

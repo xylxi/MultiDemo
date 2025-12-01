@@ -207,6 +207,8 @@ public protocol AssetFlowDataSource: AnyObject {
 
 ## 使用示例
 
+### 基本使用
+
 ```swift
 // 1. 创建 ProfileViewController
 let profileVC = ProfileViewController()
@@ -222,6 +224,29 @@ profileVC.assetFlowDataSource = MyAssetFlowDataSource()
 // - 绑定闭包回调，连接 NestedScrollManager
 // - 业务模块无需关心滚动管理细节
 ```
+
+### 默认定位功能
+
+创建个人页面时，可以指定默认定位到某个资产流模块。设置 `defaultAssetFlowIndex` 属性后，menuView 和 assetFlowContainerView 会自动定位到指定的模块。
+
+```swift
+// 创建个人页面
+let profileVC = ProfileViewController()
+
+// 设置默认定位到出境模块（索引 0）
+profileVC.defaultAssetFlowIndex = 0
+
+// 或设置默认定位到创作模块（索引 1）
+profileVC.defaultAssetFlowIndex = 1
+
+// 配置数据源（应在设置 defaultAssetFlowIndex 之后）
+profileVC.assetFlowDataSource = MyAssetFlowDataSource()
+```
+
+**注意事项：**
+- `defaultAssetFlowIndex` 应在设置 `assetFlowDataSource` **之前**设置
+- 如果索引超出范围，会自动调整为有效范围内的值
+- 默认值为 0（第一个模块）
 
 ## 新增资产流模块
 

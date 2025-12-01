@@ -41,6 +41,21 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
     /// 资产流代理（外部注入）
     weak var assetFlowDelegate: AssetFlowDelegate?
     
+    /// 默认定位的资产流索引（创建个人页面时指定，默认为 0）
+    /// 
+    /// 使用示例：
+    /// ```swift
+    /// let profileVC = ProfileViewController()
+    /// // 默认定位到出境模块（索引 0）
+    /// profileVC.defaultAssetFlowIndex = 0
+    /// // 或默认定位到创作模块（索引 1）
+    /// profileVC.defaultAssetFlowIndex = 1
+    /// profileVC.assetFlowDataSource = dataSource
+    /// ```
+    /// 
+    /// 注意：此属性应在设置 `assetFlowDataSource` 之前设置，或在 `reloadAssetFlows()` 之前设置
+    var defaultAssetFlowIndex: Int = 1
+    
     /// 嵌套滚动管理器（暴露给外部使用）
     private(set) var scrollManager = NestedScrollManager()
     
@@ -142,7 +157,9 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         loadedPages.removeAll()
         
         let titles = assetFlowConfigs.map { $0.title }
-        assetFlowContainer.configure(with: titles)
+        // 确保默认索引在有效范围内
+        let validDefaultIndex = max(0, min(defaultAssetFlowIndex, titles.count - 1))
+        assetFlowContainer.configure(with: titles, initialIndex: validDefaultIndex)
         
         // 刷新后更新 contentSize
         if isViewLoaded {
