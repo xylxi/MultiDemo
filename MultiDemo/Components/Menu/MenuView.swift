@@ -4,25 +4,25 @@ import SnapKit
 // MARK: - ================== 菜单组件 ==================
 
 // MARK: - 菜单项模型
-struct MenuItem {
-    let title: String
-    var hasChildren: Bool
+public struct MenuItem {
+    public let title: String
+    public var hasChildren: Bool
     
-    init(title: String, hasChildren: Bool = false) {
+    public init(title: String, hasChildren: Bool = false) {
         self.title = title
         self.hasChildren = hasChildren
     }
 }
 
 // MARK: - 菜单代理
-protocol MenuViewDelegate: AnyObject {
+public protocol MenuViewDelegate: AnyObject {
     func menuView(_ menuView: MenuView, didSelectItemAt index: Int)
 }
 
 // MARK: - 菜单视图
-class MenuView: UIView {
+public class MenuView: UIView {
     
-    weak var delegate: MenuViewDelegate?
+    public weak var delegate: MenuViewDelegate?
     
     private var items: [MenuItem] = []
     private var buttons: [UIButton] = []
@@ -74,7 +74,7 @@ class MenuView: UIView {
         }
     }
     
-    func configure(with items: [MenuItem]) {
+    public func configure(with items: [MenuItem]) {
         self.items = items
         
         // 清除旧按钮
@@ -119,7 +119,7 @@ class MenuView: UIView {
         delegate?.menuView(self, didSelectItemAt: index)
     }
     
-    func selectItem(at index: Int, animated: Bool = true) {
+    public func selectItem(at index: Int, animated: Bool = true) {
         guard index >= 0 && index < buttons.count else { return }
         
         selectedIndex = index

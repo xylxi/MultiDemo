@@ -82,7 +82,16 @@ public class NestedParentScrollView: UIScrollView, UIGestureRecognizerDelegate {
 /// 管理父子视图之间的滚动状态切换
 public class NestedScrollManager: NSObject {
     
+    /// 父容器（可以是 ViewController 或 View）
     public weak var parentController: (UIViewController & NestedScrollParentProtocol)?
+    
+    /// 父容器视图（用于 StickyHeaderContainerView 等纯 View 场景）
+    public weak var parentView: (UIView & NestedScrollParentProtocol)?
+    
+    /// 获取父容器协议实现
+    private var parent: NestedScrollParentProtocol? {
+        return parentController ?? parentView
+    }
     
     /// 子视图的锁定 offset（切换子视图时保存，用于保持子视图滚动位置）
     private var lockedOffsets: [ObjectIdentifier: CGFloat] = [:]
@@ -99,7 +108,7 @@ public class NestedScrollManager: NSObject {
             }
             
             // 检查是否需要允许新子视图滚动
-            if let parent = parentController {
+            if let parent = parent {
                 let maxOffset = parent.headerHeight
                 let currentOffset = parent.parentScrollView.contentOffset.y
                 
@@ -115,7 +124,7 @@ public class NestedScrollManager: NSObject {
     
     /// 处理父视图滚动
     public func handleParentScroll(_ scrollView: UIScrollView) {
-        guard let parent = parentController else { return }
+        guard let parent = parent else { return }
         
         let offsetY = scrollView.contentOffset.y
         let maxOffset = parent.headerHeight
@@ -137,7 +146,7 @@ public class NestedScrollManager: NSObject {
     
     /// 处理子视图滚动
     public func handleChildScroll(_ scrollView: UIScrollView) {
-        guard let parent = parentController,
+        guard let parent = parent,
               let child = currentChild else { return }
         
         let offsetY = scrollView.contentOffset.y

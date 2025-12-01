@@ -13,44 +13,17 @@ public typealias CurrentChildChangedHandler = (NestedScrollChildProtocol) -> Voi
 /// 用于规范资产流页面的基本行为
 /// 
 /// 解耦设计：通过闭包回调与父容器通信，不直接依赖 NestedScrollManager
-public protocol AssetFlowPageProtocol: UIViewController {
-    
-    /// 获取当前可滚动的子视图（用于嵌套滚动联动）
-    /// - Returns: 当前激活的可滚动视图，如果没有则返回 nil
-    func getCurrentScrollableChild() -> NestedScrollChildProtocol?
-    
-    /// 设置滚动事件回调（解耦方式）
-    /// - Parameters:
-    ///   - onScroll: 子视图滚动时的回调
-    ///   - onChildChanged: 当前激活子视图变更时的回调
-    func setScrollCallbacks(onScroll: @escaping ScrollEventHandler, 
-                            onChildChanged: @escaping CurrentChildChangedHandler)
-    
-    /// 获取内部所有水平滚动的 CollectionView（用于手势排除）
-    /// - Returns: 所有需要排除手势冲突的 CollectionView
-    func getAllHorizontalScrollViews() -> [UIScrollView]
-    
-    // MARK: - 页面生命周期
-    
-    /// 页面即将显示（切换到当前页面时调用）
-    func pageWillAppear()
-    
-    /// 页面已经显示
-    func pageDidAppear()
-    
-    /// 页面即将隐藏（切换离开当前页面时调用）
-    func pageWillDisappear()
-    
-    /// 页面已经隐藏
-    func pageDidDisappear()
-}
-
-// MARK: - 页面生命周期默认实现（可选重写）
-public extension AssetFlowPageProtocol {
-    func pageWillAppear() {}
-    func pageDidAppear() {}
-    func pageWillDisappear() {}
-    func pageDidDisappear() {}
+/// 
+/// 注意：AssetFlowPageProtocol 继承自 StickyPageProtocol，
+/// 因此实现此协议的类自动符合通用吸顶组件的要求
+public protocol AssetFlowPageProtocol: StickyPageProtocol {
+    // AssetFlowPageProtocol 继承 StickyPageProtocol 的所有方法：
+    // - getCurrentScrollableChild() -> NestedScrollChildProtocol?
+    // - setScrollCallbacks(onScroll:onChildChanged:)
+    // - getAllHorizontalScrollViews() -> [UIScrollView]
+    // - pageWillAppear() / pageDidAppear() / pageWillDisappear() / pageDidDisappear()
+    //
+    // 业务模块可以在此协议中添加特定于资产流的方法
 }
 
 // MARK: - 资产流配置

@@ -7,25 +7,10 @@ import SnapKit
 /// 职责：
 /// 1. 展示用户信息头部（profileHeaderView）
 /// 2. 提供资产流容器框架
-/// 3. 处理嵌套滚动和吸顶效果
+/// 3. 使用通用吸顶组件处理嵌套滚动和吸顶效果
 /// 
 /// 资产流数据由外部通过 AssetFlowDataSource 注入
-class ProfileViewController: UIViewController, NestedScrollParentProtocol {
-    
-    // MARK: - NestedScrollParentProtocol
-    var canParentScroll: Bool = true
-    
-    var headerHeight: CGFloat {
-        return profileHeaderView.bounds.height
-    }
-    
-    var stickyOffset: CGFloat {
-        return headerBarHeight
-    }
-    
-    var parentScrollView: UIScrollView {
-        return mainScrollView
-    }
+class ProfileViewController: UIViewController {
     
     // MARK: - Public Properties
     
@@ -57,7 +42,9 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
     var defaultAssetFlowIndex: Int = 1
     
     /// 嵌套滚动管理器（暴露给外部使用）
-    private(set) var scrollManager = NestedScrollManager()
+    var scrollManager: NestedScrollManager {
+        return stickyContainer.scrollManager
+    }
     
     // MARK: - Constants
     private let navBarContentHeight: CGFloat = 44  // 导航栏内容高度
@@ -70,8 +57,6 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
     
     // MARK: - Private Properties
     private var assetFlowConfigs: [AssetFlowConfig] = []
-    private var loadedPages: [Int: AssetFlowPageProtocol] = [:]
-    private var containerHeightConstraint: Constraint?
     private var profileHeaderTopConstraint: Constraint?
     private var isFirstLayout = true
     
@@ -83,17 +68,12 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         return bar
     }()
     
-    /// 主滚动视图
-    private lazy var mainScrollView: NestedParentScrollView = {
-        let sv = NestedParentScrollView()
-        sv.delegate = self
-        sv.contentInsetAdjustmentBehavior = .never
-        return sv
-    }()
-    
-    private lazy var contentView: UIView = {
-        let view = UIView()
-        return view
+    /// 通用吸顶容器
+    private lazy var stickyContainer: StickyHeaderContainerView = {
+        let container = StickyHeaderContainerView()
+        container.dataSource = self
+        container.delegate = self
+        return container
     }()
     
     /// 用户信息头部（ProfileViewController 负责）
@@ -102,38 +82,44 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         return view
     }()
     
-    /// 资产流容器（包含菜单和分页）
-    private lazy var assetFlowContainer: AssetFlowContainerView = {
-        let container = AssetFlowContainerView()
-        container.delegate = self
-        container.menuHeight = menuHeight
-        return container
+    /// 头部视图包装器（用于添加顶部间距）
+    private lazy var headerWrapper: UIView = {
+        let wrapper = UIView()
+        wrapper.backgroundColor = .systemBackground
+        wrapper.addSubview(profileHeaderView)
+        
+        // 初始约束（使用估计值，后续在 viewSafeAreaInsetsDidChange 中更新）
+        let estimatedTopInset = UIApplication.shared.windows.first?.safeAreaInsets.top ?? 44
+        profileHeaderView.snp.makeConstraints { make in
+            make.top.equalToSuperview().offset(estimatedTopInset + navBarContentHeight)
+            make.leading.trailing.bottom.equalToSuperview()
+        }
+        
+        return wrapper
     }()
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        setupScrollManager()
         reloadAssetFlows()
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        updateContentSize()
         
         if isFirstLayout && profileHeaderView.bounds.height > 0 {
             isFirstLayout = false
-            DispatchQueue.main.async {
-                self.setupGestureExclusion()
-            }
+            updateHeaderWrapperLayout()
         }
     }
     
     override func viewSafeAreaInsetsDidChange() {
         super.viewSafeAreaInsetsDidChange()
-        // 更新 profileHeaderView 的顶部约束以适配安全区域
-        profileHeaderTopConstraint?.update(offset: headerBarHeight)
+        updateHeaderWrapperLayout()
+        
+        // 更新 stickyOffset（安全区域变化后才能获取正确的值）
+        stickyContainer.updateStickyOffset(headerBarHeight)
     }
     
     // MARK: - Public Methods
@@ -148,28 +134,17 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
     func reloadAssetFlows() {
         guard let dataSource = assetFlowDataSource else {
             assetFlowConfigs = []
-            assetFlowContainer.configure(with: [])
-            updateContentSize()
+            configureStickyContainer()
             return
         }
         
         assetFlowConfigs = dataSource.assetFlowConfigs()
-        loadedPages.removeAll()
-        
-        let titles = assetFlowConfigs.map { $0.title }
-        // 确保默认索引在有效范围内
-        let validDefaultIndex = max(0, min(defaultAssetFlowIndex, titles.count - 1))
-        assetFlowContainer.configure(with: titles, initialIndex: validDefaultIndex)
-        
-        // 刷新后更新 contentSize
-        if isViewLoaded {
-            updateContentSize()
-        }
+        configureStickyContainer()
     }
     
     /// 获取资产流菜单视图（用于自定义样式）
-    var assetFlowMenuView: MenuView {
-        return assetFlowContainer.menuView
+    var assetFlowMenuView: StickyMenuViewProtocol? {
+        return stickyContainer.menuView
     }
     
     // MARK: - Private Methods
@@ -178,35 +153,10 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         view.backgroundColor = .systemBackground
         navigationController?.setNavigationBarHidden(true, animated: false)
         
-        view.addSubview(mainScrollView)
-        mainScrollView.addSubview(contentView)
+        view.addSubview(stickyContainer)
         
-        mainScrollView.snp.makeConstraints { make in
+        stickyContainer.snp.makeConstraints { make in
             make.edges.equalToSuperview()
-        }
-        
-        contentView.snp.makeConstraints { make in
-            make.top.leading.trailing.equalToSuperview()
-            make.width.equalToSuperview()
-        }
-        
-        // 用户信息头部
-        contentView.addSubview(profileHeaderView)
-        
-        // 初始使用估计值，后续在 viewSafeAreaInsetsDidChange 中更新
-        let estimatedTopInset = UIApplication.shared.windows.first?.safeAreaInsets.top ?? 44
-        
-        profileHeaderView.snp.makeConstraints { make in
-            profileHeaderTopConstraint = make.top.equalToSuperview().offset(estimatedTopInset + navBarContentHeight).constraint
-            make.leading.trailing.equalToSuperview()
-        }
-        
-        // 资产流容器
-        contentView.addSubview(assetFlowContainer)
-        
-        assetFlowContainer.snp.makeConstraints { make in
-            make.top.equalTo(profileHeaderView.snp.bottom)
-            make.leading.trailing.bottom.equalToSuperview()
         }
         
         // 顶部导航栏（最上层）
@@ -219,142 +169,86 @@ class ProfileViewController: UIViewController, NestedScrollParentProtocol {
         }
     }
     
-    private func setupScrollManager() {
-        scrollManager.parentController = self
-    }
-    
-    private func setupGestureExclusion() {
-        // 添加资产流容器的水平滚动视图到排除列表
-        mainScrollView.addExcludeSuperView(assetFlowContainer.getPageCollectionView())
-        updateGestureExclusion()
-    }
-    
-    private func updateGestureExclusion() {
-        let allHorizontalViews = assetFlowContainer.getAllHorizontalScrollViews()
-        for view in allHorizontalViews {
-            mainScrollView.addExcludeSuperView(view)
-        }
-    }
-    
-    private func updateContentSize() {
-        let contentHeight = view.bounds.height - headerBarHeight - menuHeight
+    private func configureStickyContainer() {
+        // 先访问 headerWrapper 触发懒加载，确保 profileHeaderView 有 superview
+        _ = headerWrapper
         
-        if containerHeightConstraint == nil {
-            assetFlowContainer.snp.makeConstraints { make in
-                containerHeightConstraint = make.height.equalTo(contentHeight + menuHeight).constraint
-            }
-        } else {
-            containerHeightConstraint?.update(offset: contentHeight + menuHeight)
+        // 更新头部视图顶部约束
+        profileHeaderView.snp.updateConstraints { make in
+            make.top.equalToSuperview().offset(headerBarHeight)
         }
         
-        // 如果没有资产流数据，contentSize 等于视图高度，禁止滚动
-        if assetFlowConfigs.isEmpty {
-            mainScrollView.contentSize = CGSize(width: view.bounds.width, height: view.bounds.height)
-            mainScrollView.isScrollEnabled = false
-        } else {
-            let totalHeight = headerBarHeight + profileHeaderView.bounds.height + menuHeight + contentHeight
-            mainScrollView.contentSize = CGSize(width: view.bounds.width, height: totalHeight)
-            mainScrollView.isScrollEnabled = true
-        }
+        let config = StickyContainerConfig(
+            menuHeight: menuHeight,
+            stickyOffset: headerBarHeight,
+            initialPageIndex: max(0, min(defaultAssetFlowIndex, assetFlowConfigs.count - 1)),
+            bounces: true
+        )
+        
+        stickyContainer.configure(
+            with: config,
+            headerView: headerWrapper,
+            menuView: nil  // 使用默认菜单
+        )
     }
     
-    private func handleScroll(_ scrollView: UIScrollView) {
-        let offsetY = scrollView.contentOffset.y
-        
-        // HeaderBar 背景透明度
-        let avatarBottomY = profileHeaderView.avatarBottomY + headerBarHeight
-        let headerBarProgress = min(1, max(0, offsetY / avatarBottomY))
-        headerBar.updateAppearance(progress: headerBarProgress)
-        
-        // 处理嵌套滚动
-        scrollManager.handleParentScroll(scrollView)
-        
-        // 菜单吸顶
-        updateStickyMenuPosition(offsetY: min(offsetY, profileHeaderView.bounds.height))
-    }
-    
-    private func updateStickyMenuPosition(offsetY: CGFloat) {
-        let stickyPoint = profileHeaderView.bounds.height
-        
-        if offsetY >= stickyPoint {
-            assetFlowContainer.menuView.transform = CGAffineTransform(translationX: 0, y: offsetY - stickyPoint)
-        } else {
-            assetFlowContainer.menuView.transform = .identity
+    private func updateHeaderWrapperLayout() {
+        profileHeaderView.snp.updateConstraints { make in
+            make.top.equalToSuperview().offset(headerBarHeight)
         }
+        headerWrapper.layoutIfNeeded()
     }
 }
 
-// MARK: - UIScrollViewDelegate
-extension ProfileViewController: UIScrollViewDelegate {
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        if scrollView === mainScrollView {
-            handleScroll(scrollView)
-        }
+// MARK: - StickyContainerDataSource
+extension ProfileViewController: StickyContainerDataSource {
+    func numberOfPages(in container: StickyHeaderContainerView) -> Int {
+        return assetFlowConfigs.count
+    }
+    
+    func stickyContainer(_ container: StickyHeaderContainerView, titleForPageAt index: Int) -> String {
+        guard index < assetFlowConfigs.count else { return "" }
+        return assetFlowConfigs[index].title
+    }
+    
+    func stickyContainer(_ container: StickyHeaderContainerView, pageAt index: Int) -> StickyPageProtocol {
+        let page = assetFlowConfigs[index].pageFactory()
+        
+        // 添加为子控制器
+        addChild(page)
+        page.didMove(toParent: self)
+        
+        print("[ProfileViewController] 懒加载资产流页面: \(assetFlowConfigs[index].title)")
+        
+        return page
     }
 }
 
-// MARK: - AssetFlowContainerDelegate
-extension ProfileViewController: AssetFlowContainerDelegate {
-    func assetFlowContainer(_ container: AssetFlowContainerView, didSwitchToIndex index: Int) {
-        // 更新手势排除
-        updateGestureExclusion()
-        
-        // 更新 currentChild
-        if let page = loadedPages[index],
-           let scrollChild = page.getCurrentScrollableChild() {
-            scrollManager.currentChild = scrollChild
-        }
-        
+// MARK: - StickyContainerDelegate
+extension ProfileViewController: StickyContainerDelegate {
+    func stickyContainer(_ container: StickyHeaderContainerView, didSwitchToPageAt index: Int) {
         // 通知代理
         if index < assetFlowConfigs.count {
             assetFlowDelegate?.assetFlowDidSwitchTo(index: index, title: assetFlowConfigs[index].title)
         }
     }
     
-    func assetFlowContainer(_ container: AssetFlowContainerView, needsPageAt index: Int) -> AssetFlowPageProtocol? {
-        guard index >= 0 && index < assetFlowConfigs.count else { return nil }
+    func stickyContainer(_ container: StickyHeaderContainerView, scrollProgressDidChange progress: CGFloat) {
+        // 更新 HeaderBar 背景透明度
+        let avatarBottomY = profileHeaderView.avatarBottomY + headerBarHeight
+        let headerH = profileHeaderView.bounds.height
         
-        // 检查缓存
-        if let page = loadedPages[index] {
-            return page
-        }
-        
-        // 懒加载创建
-        let page = assetFlowConfigs[index].pageFactory()
-        
-        // 绑定闭包回调（组装层负责连接 NestedScrollManager）
-        page.setScrollCallbacks(
-            onScroll: { [weak self] scrollView in
-                self?.scrollManager.handleChildScroll(scrollView)
-            },
-            onChildChanged: { [weak self] child in
-                self?.scrollManager.currentChild = child
-            }
-        )
-        
-        loadedPages[index] = page
-        
-        // 添加为子控制器
-        addChild(page)
-        page.didMove(toParent: self)
-        
-        // 更新手势排除
-        DispatchQueue.main.async {
-            self.updateGestureExclusion()
-        }
-        
-        // 如果是当前页面，更新 currentChild
-        if index == container.currentIndex,
-           let scrollChild = page.getCurrentScrollableChild() {
-            scrollManager.currentChild = scrollChild
-        }
-        
+        // 基于头像位置计算进度
+        let currentOffset = progress * headerH
+        let headerBarProgress = min(1, max(0, currentOffset / avatarBottomY))
+        headerBar.updateAppearance(progress: headerBarProgress)
+    }
+    
+    func stickyContainer(_ container: StickyHeaderContainerView, didLoadPageAt index: Int, page: StickyPageProtocol) {
         // 通知代理
-        assetFlowDelegate?.assetFlowDidLoadPage(at: index, page: page)
-        
-        print("[ProfileViewController] 懒加载资产流页面: \(assetFlowConfigs[index].title)")
-        
-        return page
+        if let assetFlowPage = page as? AssetFlowPageProtocol {
+            assetFlowDelegate?.assetFlowDidLoadPage(at: index, page: assetFlowPage)
+        }
     }
 }
 

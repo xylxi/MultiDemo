@@ -14,6 +14,11 @@ class CreationViewController: UIViewController, AssetFlowPageProtocol {
     
     func getCurrentScrollableChild() -> NestedScrollChildProtocol? {
         // 需要递归获取当前激活的子视图
+        // 如果当前页面还没加载，先加载它
+        if loadedPages[currentIndex] == nil {
+            _ = loadPage(at: currentIndex)
+        }
+        
         let currentPage = loadedPages[currentIndex]
         
         if let assetsVC = currentPage as? AssetsViewController {

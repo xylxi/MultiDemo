@@ -14,6 +14,10 @@ class AppearanceViewController: UIViewController, AssetFlowPageProtocol {
     // MARK: - AssetFlowPageProtocol
     
     func getCurrentScrollableChild() -> NestedScrollChildProtocol? {
+        // 如果当前页面还没加载，先加载它
+        if currentWorksFlowVC == nil && loadedPages[currentIndex] == nil {
+            _ = loadPage(at: currentIndex)
+        }
         return currentWorksFlowVC
     }
     
