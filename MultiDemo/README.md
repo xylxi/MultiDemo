@@ -215,54 +215,65 @@ extension MyViewController: StickyContainerDelegate {
 ```swift
 class MyPageViewController: UIViewController, StickyPageProtocol {
     
-    private var onScrollEvent: ((UIScrollView) -> Void)?
-    private var onCurrentChildChanged: ((NestedScrollChildProtocol) -> Void)?
-    
     private var worksVC: WorksFlowViewController?
     
     // MARK: - StickyPageProtocol
     
-    /// 返回当前可滚动的子视图（用于嵌套滚动）
+    /// 返回当前可滚动的子视图
     func getCurrentScrollableChild() -> NestedScrollChildProtocol? {
-        // ⚠️ 如果子视图还没加载，先加载它
         if worksVC == nil {
             worksVC = loadWorksVC()
         }
         return worksVC
     }
     
-    /// 设置滚动回调（容器会调用此方法绑定回调）
+    /// 设置滚动回调（使用响应链方式时可留空）
     func setScrollCallbacks(
         onScroll: @escaping (UIScrollView) -> Void,
         onChildChanged: @escaping (NestedScrollChildProtocol) -> Void
     ) {
-        self.onScrollEvent = onScroll
-        self.onCurrentChildChanged = onChildChanged
+        // ✅ 约定大于配置：子视图通过响应链自动发现容器
+        // 无需手动绑定闭包
     }
     
-    /// 返回内部水平滚动视图（用于手势排除）
     func getAllHorizontalScrollViews() -> [UIScrollView] {
-        return [pageCollectionView]  // 如果有水平滚动的 CollectionView
+        return [pageCollectionView]
     }
-    
-    // MARK: - 页面生命周期（可选）
     
     func pageWillAppear() { }
     func pageDidAppear() { }
     func pageWillDisappear() { }
     func pageDidDisappear() { }
     
-    // MARK: - Private
-    
     private func loadWorksVC() -> WorksFlowViewController {
         let vc = WorksFlowViewController(...)
-        // ⚠️ 绑定滚动回调
-        vc.onScrollEvent = { [weak self] scrollView in
-            self?.onScrollEvent?(scrollView)
-        }
+        // ✅ 不需要手动绑定闭包，WorksFlowViewController 会自动注册
         addChild(vc)
         vc.didMove(toParent: self)
         return vc
+    }
+}
+```
+
+#### 5. 叶子节点自动注册（约定大于配置）
+
+`WorksFlowViewController` 等叶子节点会在 `viewDidAppear` 时自动注册：
+
+```swift
+class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
+    
+    private weak var nestedContainer: NestedScrollContainerProtocol?
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // ✅ 约定：自动通过响应链查找容器并注册
+        nestedContainer = view.findNestedScrollContainer()
+        nestedContainer?.registerScrollableChild(self)
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        // ✅ 约定：自动调用容器处理滚动
+        nestedContainer?.handleChildScroll(scrollView)
     }
 }
 ```
@@ -318,6 +329,29 @@ class MyAssetFlowDataSource: AssetFlowDataSource {
 ---
 
 ## 协议规范
+
+### 🆕 NestedScrollContainerProtocol（约定大于配置）
+
+采用"约定大于配置"原则，子视图通过响应链自动发现容器，**无需层层传递闭包**：
+
+```swift
+/// 容器协议 - StickyHeaderContainerView 已实现
+public protocol NestedScrollContainerProtocol: AnyObject {
+    func registerScrollableChild(_ child: NestedScrollChildProtocol)
+    func handleChildScroll(_ scrollView: UIScrollView)
+}
+
+/// 响应链扩展
+extension UIResponder {
+    func findNestedScrollContainer() -> NestedScrollContainerProtocol?
+}
+```
+
+| 方面 | 闭包方式 | 响应链方式（推荐） |
+|------|---------|------------------|
+| 代码量 | 每层传递闭包 | 叶子节点一次查找 |
+| 耦合度 | 层层依赖 | 只依赖协议 |
+| 新增模块 | 需手动绑定 | 自动注册 |
 
 ### StickyPageProtocol
 
@@ -411,13 +445,30 @@ func getCurrentScrollableChild() -> NestedScrollChildProtocol? {
 
 ### 3. 滚动回调绑定
 
-子页面内部的 ScrollView 必须正确绑定滚动回调：
+**推荐方式：响应链自动注册**（约定大于配置）
+
+无需手动绑定，叶子节点会自动通过响应链发现容器：
+
+```swift
+// WorksFlowViewController 内部已实现，无需额外代码
+override func viewDidAppear(_ animated: Bool) {
+    super.viewDidAppear(animated)
+    nestedContainer = view.findNestedScrollContainer()
+    nestedContainer?.registerScrollableChild(self)
+}
+```
+
+**兼容方式：手动闭包绑定**
+
+如需向后兼容或特殊场景，可手动绑定闭包：
 
 ```swift
 worksVC.onScrollEvent = { [weak self] scrollView in
     self?.onScrollEvent?(scrollView)  // 传递给容器
 }
 ```
+
+> ⚠️ 如果设置了 `onScrollEvent` 闭包，会优先使用闭包方式，不会走响应链
 
 ---
 
@@ -456,14 +507,14 @@ worksVC.onScrollEvent = { [weak self] scrollView in
 
 ## 解耦收益
 
-| 对比项 | 改造前 | 改造后 |
-|--------|-------|--------|
-| 业务模块依赖 | ❌ 直接依赖 NestedScrollManager | ✅ 仅依赖闭包类型 |
-| 吸顶组件复用 | ❌ 与业务耦合 | ✅ 通用组件，可复用 |
-| 独立发布 | ❌ 无法独立成 Pod | ✅ 可独立发布 |
-| 单元测试 | ❌ 需要 Mock Manager | ✅ 只需 Mock 闭包 |
-| 多团队协作 | ❌ 需要理解滚动管理 | ✅ 只需实现协议 |
-| 可替换性 | ❌ 强绑定实现 | ✅ 可替换不同实现 |
+| 对比项 | 改造前 | 闭包方式 | 响应链方式 |
+|--------|-------|---------|-----------|
+| 业务模块依赖 | ❌ 直接依赖 Manager | ✅ 仅依赖闭包类型 | ✅✅ 仅依赖协议 |
+| 代码复杂度 | ❌ 高 | ⚠️ 需层层传递 | ✅ 自动发现 |
+| 吸顶组件复用 | ❌ 与业务耦合 | ✅ 通用组件 | ✅ 通用组件 |
+| 独立发布 | ❌ 无法独立 | ✅ 可独立发布 | ✅ 可独立发布 |
+| 新增模块 | ❌ 需修改多处 | ⚠️ 需绑定闭包 | ✅ 自动注册 |
+| 多团队协作 | ❌ 需理解滚动管理 | ✅ 只需实现协议 | ✅✅ 遵循约定即可 |
 
 ---
 

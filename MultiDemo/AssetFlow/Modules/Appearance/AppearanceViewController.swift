@@ -8,7 +8,10 @@ import SnapKit
 /// 出境模块 ViewController
 /// 实现 AssetFlowPageProtocol 协议
 /// 
-/// 解耦设计：不依赖 NestedScrollManager，通过闭包回调与父容器通信
+/// 解耦设计：
+/// - 使用"约定大于配置"原则
+/// - 子页面（WorksFlowViewController）通过响应链自动发现容器
+/// - 无需手动传递闭包
 class AppearanceViewController: UIViewController, AssetFlowPageProtocol {
     
     // MARK: - AssetFlowPageProtocol
@@ -21,19 +24,15 @@ class AppearanceViewController: UIViewController, AssetFlowPageProtocol {
         return currentWorksFlowVC
     }
     
-    func setScrollCallbacks(onScroll: @escaping ScrollEventHandler,
-                            onChildChanged: @escaping CurrentChildChangedHandler) {
-        self.onScrollEvent = onScroll
-        self.onCurrentChildChanged = onChildChanged
+    func setScrollCallbacks(onScroll: @escaping (UIScrollView) -> Void,
+                            onChildChanged: @escaping (NestedScrollChildProtocol) -> Void) {
+        // 约定大于配置：不再需要手动绑定闭包
+        // 子页面通过响应链自动发现容器
     }
     
     func getAllHorizontalScrollViews() -> [UIScrollView] {
         return [pageCollectionView]
     }
-    
-    // MARK: - 闭包回调（解耦 NestedScrollManager）
-    private var onScrollEvent: ScrollEventHandler?
-    private var onCurrentChildChanged: CurrentChildChangedHandler?
     
     // MARK: - Properties
     private var currentWorksFlowVC: WorksFlowViewController?
@@ -77,25 +76,13 @@ class AppearanceViewController: UIViewController, AssetFlowPageProtocol {
         super.viewDidLoad()
         setupUI()
         setupMenu()
-        print("[AppearanceViewController] viewDidLoad - 出境模块已加载")
     }
     
     // MARK: - 页面生命周期
-    func pageWillAppear() {
-        print("[AppearanceViewController] pageWillAppear - 出境页面即将显示")
-    }
-    
-    func pageDidAppear() {
-        print("[AppearanceViewController] pageDidAppear - 出境页面已显示")
-    }
-    
-    func pageWillDisappear() {
-        print("[AppearanceViewController] pageWillDisappear - 出境页面即将隐藏")
-    }
-    
-    func pageDidDisappear() {
-        print("[AppearanceViewController] pageDidDisappear - 出境页面已隐藏")
-    }
+    func pageWillAppear() { }
+    func pageDidAppear() { }
+    func pageWillDisappear() { }
+    func pageDidDisappear() { }
     
     private func setupUI() {
         view.backgroundColor = .systemBackground
@@ -128,10 +115,8 @@ class AppearanceViewController: UIViewController, AssetFlowPageProtocol {
         let path = "出境 > \(category.title)"
         let worksVC = WorksFlowViewController(categoryPath: path, color: category.color)
         
-        // 绑定闭包回调
-        worksVC.onScrollEvent = { [weak self] scrollView in
-            self?.onScrollEvent?(scrollView)
-        }
+        // ✅ 不再需要手动绑定闭包
+        // worksVC 会在 viewDidAppear 时通过响应链自动发现容器
         
         addChild(worksVC)
         worksVC.didMove(toParent: self)
@@ -140,10 +125,7 @@ class AppearanceViewController: UIViewController, AssetFlowPageProtocol {
         
         if index == currentIndex {
             currentWorksFlowVC = worksVC
-            onCurrentChildChanged?(worksVC)
         }
-        
-        print("[AppearanceViewController] 懒加载: \(path)")
         
         return worksVC
     }
@@ -190,7 +172,6 @@ extension AppearanceViewController: UICollectionViewDelegate {
             
             if let worksVC = loadedPages[index] {
                 currentWorksFlowVC = worksVC
-                onCurrentChildChanged?(worksVC)
             }
         }
     }

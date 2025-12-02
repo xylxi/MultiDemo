@@ -7,7 +7,10 @@ import SnapKit
 
 /// 创作模块 ViewController
 /// 
-/// 解耦设计：不依赖 NestedScrollManager，通过闭包回调与父容器通信
+/// 解耦设计：
+/// - 使用"约定大于配置"原则
+/// - 子页面（WorksFlowViewController）通过响应链自动发现容器
+/// - 无需手动传递闭包
 class CreationViewController: UIViewController, AssetFlowPageProtocol {
     
     // MARK: - AssetFlowPageProtocol
@@ -29,10 +32,10 @@ class CreationViewController: UIViewController, AssetFlowPageProtocol {
         return nil
     }
     
-    func setScrollCallbacks(onScroll: @escaping ScrollEventHandler,
-                            onChildChanged: @escaping CurrentChildChangedHandler) {
-        self.onScrollEvent = onScroll
-        self.onCurrentChildChanged = onChildChanged
+    func setScrollCallbacks(onScroll: @escaping (UIScrollView) -> Void,
+                            onChildChanged: @escaping (NestedScrollChildProtocol) -> Void) {
+        // 约定大于配置：不再需要手动绑定闭包
+        // 子页面通过响应链自动发现容器
     }
     
     func getAllHorizontalScrollViews() -> [UIScrollView] {
@@ -46,10 +49,6 @@ class CreationViewController: UIViewController, AssetFlowPageProtocol {
         
         return views
     }
-    
-    // MARK: - 闭包回调（解耦 NestedScrollManager）
-    private var onScrollEvent: ScrollEventHandler?
-    private var onCurrentChildChanged: CurrentChildChangedHandler?
     
     // MARK: - Properties
     private var loadedPages: [Int: UIViewController] = [:]
@@ -111,25 +110,13 @@ class CreationViewController: UIViewController, AssetFlowPageProtocol {
         super.viewDidLoad()
         setupUI()
         setupMenu()
-        print("[CreationViewController] viewDidLoad - 创作模块已加载")
     }
     
     // MARK: - 页面生命周期
-    func pageWillAppear() {
-        print("[CreationViewController] pageWillAppear - 创作页面即将显示")
-    }
-    
-    func pageDidAppear() {
-        print("[CreationViewController] pageDidAppear - 创作页面已显示")
-    }
-    
-    func pageWillDisappear() {
-        print("[CreationViewController] pageWillDisappear - 创作页面即将隐藏")
-    }
-    
-    func pageDidDisappear() {
-        print("[CreationViewController] pageDidDisappear - 创作页面已隐藏")
-    }
+    func pageWillAppear() { }
+    func pageDidAppear() { }
+    func pageWillDisappear() { }
+    func pageDidDisappear() { }
     
     private func setupUI() {
         view.backgroundColor = .systemBackground
@@ -167,26 +154,14 @@ class CreationViewController: UIViewController, AssetFlowPageProtocol {
         if category == .assets {
             // 资产有三级分类
             let assetsVC = AssetsViewController()
-            // 传递闭包给子模块
-            assetsVC.setScrollCallbacks(
-                onScroll: { [weak self] scrollView in
-                    self?.onScrollEvent?(scrollView)
-                },
-                onChildChanged: { [weak self] child in
-                    self?.onCurrentChildChanged?(child)
-                }
-            )
+            // ✅ 不再需要手动绑定闭包
             page = assetsVC
-            print("[CreationViewController] 懒加载: 创作 > 资产 (三级分类)")
         } else {
             let path = "创作 > \(category.title)"
             let worksVC = WorksFlowViewController(categoryPath: path, color: category.color)
-            // 绑定闭包回调
-            worksVC.onScrollEvent = { [weak self] scrollView in
-                self?.onScrollEvent?(scrollView)
-            }
+            // ✅ 不再需要手动绑定闭包
+            // worksVC 会在 viewDidAppear 时通过响应链自动发现容器
             page = worksVC
-            print("[CreationViewController] 懒加载: \(path)")
         }
         
         addChild(page)
@@ -194,18 +169,7 @@ class CreationViewController: UIViewController, AssetFlowPageProtocol {
         
         loadedPages[index] = page
         
-        // 更新 currentChild
-        if index == currentIndex {
-            updateCurrentChild()
-        }
-        
         return page
-    }
-    
-    private func updateCurrentChild() {
-        if let scrollChild = getCurrentScrollableChild() {
-            onCurrentChildChanged?(scrollChild)
-        }
     }
 }
 
@@ -247,7 +211,6 @@ extension CreationViewController: UICollectionViewDelegate {
         if index != currentIndex && index >= 0 && index < SubCategory.allCases.count {
             currentIndex = index
             menuView.selectItem(at: index)
-            updateCurrentChild()
         }
     }
 }
@@ -264,12 +227,10 @@ extension CreationViewController: UICollectionViewDelegateFlowLayout {
 /// 资产 ViewController
 /// 创作模块的子模块，包含四个子分类
 /// 
-/// 解耦设计：不依赖 NestedScrollManager，通过闭包回调与父容器通信
+/// 解耦设计：
+/// - 使用"约定大于配置"原则
+/// - 子页面通过响应链自动发现容器
 class AssetsViewController: UIViewController {
-    
-    // MARK: - 闭包回调（解耦 NestedScrollManager）
-    private var onScrollEvent: ScrollEventHandler?
-    private var onCurrentChildChanged: CurrentChildChangedHandler?
     
     private var loadedPages: [Int: WorksFlowViewController] = [:]
     private var currentIndex: Int = 0
@@ -309,7 +270,6 @@ class AssetsViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         setupMenu()
-        print("[AssetsViewController] viewDidLoad - 资产模块已加载")
     }
     
     private func setupUI() {
@@ -334,13 +294,11 @@ class AssetsViewController: UIViewController {
         menuView.configure(with: menuItems)
     }
     
-    func setScrollCallbacks(onScroll: @escaping ScrollEventHandler,
-                            onChildChanged: @escaping CurrentChildChangedHandler) {
-        self.onScrollEvent = onScroll
-        self.onCurrentChildChanged = onChildChanged
-    }
-    
     func getCurrentScrollableChild() -> NestedScrollChildProtocol? {
+        // 如果当前页面还没加载，先加载它
+        if loadedPages[currentIndex] == nil {
+            _ = loadPage(at: currentIndex)
+        }
         return loadedPages[currentIndex]
     }
     
@@ -357,21 +315,13 @@ class AssetsViewController: UIViewController {
         let path = "创作 > 资产 > \(category.title)"
         let worksVC = WorksFlowViewController(categoryPath: path, color: category.color)
         
-        // 绑定闭包回调
-        worksVC.onScrollEvent = { [weak self] scrollView in
-            self?.onScrollEvent?(scrollView)
-        }
+        // ✅ 不再需要手动绑定闭包
+        // worksVC 会在 viewDidAppear 时通过响应链自动发现容器
         
         addChild(worksVC)
         worksVC.didMove(toParent: self)
         
         loadedPages[index] = worksVC
-        
-        if index == currentIndex {
-            onCurrentChildChanged?(worksVC)
-        }
-        
-        print("[AssetsViewController] 懒加载: \(path)")
         
         return worksVC
     }
@@ -415,10 +365,6 @@ extension AssetsViewController: UICollectionViewDelegate {
         if index != currentIndex && index >= 0 && index < subCategories.count {
             currentIndex = index
             menuView.selectItem(at: index)
-            
-            if let worksVC = loadedPages[index] {
-                onCurrentChildChanged?(worksVC)
-            }
         }
     }
 }

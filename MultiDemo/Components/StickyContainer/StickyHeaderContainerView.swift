@@ -14,7 +14,7 @@ import SnapKit
 /// - 业务无关，通过协议注入内容
 /// - 内置嵌套滚动管理
 /// - 支持吸顶效果
-public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol {
+public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, NestedScrollContainerProtocol {
     
     // MARK: - NestedScrollParentProtocol
     
@@ -32,6 +32,18 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol {
     
     public var parentScrollView: UIScrollView {
         return mainScrollView
+    }
+    
+    // MARK: - NestedScrollContainerProtocol（约定大于配置）
+    
+    /// 注册可滚动的子视图（子视图通过响应链自动调用）
+    public func registerScrollableChild(_ child: NestedScrollChildProtocol) {
+        scrollManager.currentChild = child
+    }
+    
+    /// 处理子视图滚动事件（子视图通过响应链自动调用）
+    public func handleChildScroll(_ scrollView: UIScrollView) {
+        scrollManager.handleChildScroll(scrollView)
     }
     
     // MARK: - Public Properties
@@ -455,7 +467,8 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol {
         
         let page = dataSource.stickyContainer(self, pageAt: index)
         
-        // 绑定滚动回调
+        // 向后兼容：绑定滚动回调（推荐使用响应链方式，无需手动绑定）
+        // 如果子页面使用响应链方式，这些闭包会被忽略
         page.setScrollCallbacks(
             onScroll: { [weak self] scrollView in
                 self?.scrollManager.handleChildScroll(scrollView)
@@ -473,12 +486,6 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol {
         // 更新手势排除
         DispatchQueue.main.async {
             self.updateGestureExclusion()
-        }
-        
-        // 如果是当前页面，更新 currentChild
-        if index == currentPageIndex,
-           let scrollChild = page.getCurrentScrollableChild() {
-            scrollManager.currentChild = scrollChild
         }
         
         return page

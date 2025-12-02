@@ -6,16 +6,22 @@ import SnapKit
 /// 作品流 ViewController（叶子节点）
 /// 展示具体的作品列表
 /// 
-/// 解耦设计：不依赖 NestedScrollManager，通过闭包回调处理滚动事件
+/// 解耦设计：
+/// - 方式一（推荐）：通过响应链自动发现容器，无需手动绑定
+/// - 方式二（兼容）：通过闭包回调处理滚动事件
 class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
     
     // MARK: - NestedScrollChildProtocol
     var childScrollView: UIScrollView { collectionView }
     var canChildScroll: Bool = false
     
-    // MARK: - 闭包回调（解耦 NestedScrollManager）
+    // MARK: - 响应链容器（约定大于配置）
+    /// 通过响应链自动发现的容器，无需手动传递
+    private weak var nestedContainer: NestedScrollContainerProtocol?
     
-    /// 滚动事件回调，由外部处理滚动逻辑
+    // MARK: - 闭包回调（向后兼容）
+    /// 滚动事件回调，如果设置了闭包则优先使用闭包
+    /// 如果未设置闭包，则自动使用响应链容器
     var onScrollEvent: ((UIScrollView) -> Void)?
     
     // MARK: - Properties
@@ -55,7 +61,17 @@ class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        print("[WorksFlowViewController] viewDidLoad - \(categoryPath)")
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        // 约定：自动通过响应链查找容器并注册
+        // 如果没有设置闭包，则使用响应链方式
+        if onScrollEvent == nil {
+            nestedContainer = view.findNestedScrollContainer()
+            nestedContainer?.registerScrollableChild(self)
+        }
     }
     
     private func setupUI() {
@@ -84,7 +100,13 @@ extension WorksFlowViewController: UICollectionViewDataSource {
 // MARK: - UICollectionViewDelegate
 extension WorksFlowViewController: UICollectionViewDelegate {
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        onScrollEvent?(scrollView)
+        // 优先使用闭包（向后兼容）
+        if let handler = onScrollEvent {
+            handler(scrollView)
+        } else {
+            // 使用响应链容器（约定大于配置）
+            nestedContainer?.handleChildScroll(scrollView)
+        }
     }
 }
 

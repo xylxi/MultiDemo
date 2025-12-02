@@ -13,6 +13,52 @@ public protocol NestedScrollChildProtocol: AnyObject {
     var canChildScroll: Bool { get set }
 }
 
+// MARK: - 嵌套滚动容器协议（约定大于配置）
+/// 容器实现此协议，子视图通过响应链自动查找并注册
+/// 
+/// 使用方式：
+/// 1. 容器（如 StickyHeaderContainerView）实现此协议
+/// 2. 叶子节点（如 WorksFlowViewController）在 viewDidAppear 时调用 findNestedScrollContainer() 自动注册
+/// 3. 叶子节点在 scrollViewDidScroll 时调用 container.handleChildScroll() 通知容器
+/// 
+/// 优点：无需层层传递闭包，子视图自动发现并注册到最近的容器
+public protocol NestedScrollContainerProtocol: AnyObject {
+    
+    /// 注册可滚动的子视图（子视图在 viewDidAppear 时自动调用）
+    func registerScrollableChild(_ child: NestedScrollChildProtocol)
+    
+    /// 处理子视图滚动事件（子视图在 scrollViewDidScroll 时自动调用）
+    func handleChildScroll(_ scrollView: UIScrollView)
+}
+
+// MARK: - 响应链扩展
+public extension UIResponder {
+    
+    /// 沿响应链向上查找实现了 NestedScrollContainerProtocol 的容器
+    /// 
+    /// 使用示例：
+    /// ```swift
+    /// override func viewDidAppear(_ animated: Bool) {
+    ///     super.viewDidAppear(animated)
+    ///     if let container = view.findNestedScrollContainer() {
+    ///         container.registerScrollableChild(self)
+    ///     }
+    /// }
+    /// ```
+    /// 
+    /// - Returns: 最近的嵌套滚动容器，如果没有则返回 nil
+    func findNestedScrollContainer() -> NestedScrollContainerProtocol? {
+        var responder: UIResponder? = self
+        while let r = responder {
+            if let container = r as? NestedScrollContainerProtocol {
+                return container
+            }
+            responder = r.next
+        }
+        return nil
+    }
+}
+
 // MARK: - 嵌套滚动父视图协议
 /// 作为嵌套滚动的父视图需要实现此协议
 public protocol NestedScrollParentProtocol: AnyObject {
