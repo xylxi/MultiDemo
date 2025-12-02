@@ -11,16 +11,15 @@
 
 ### Swift Package Manager
 
-#### 方式一：Xcode 添加本地包（推荐）
+#### 本地包（开发阶段）
 
-1. 打开 Xcode 项目
-2. 选择 **File** → **Add Package Dependencies...**
-3. 点击 **Add Local...**
-4. 选择 `Packages/StickyScrollKit` 目录
-5. 点击 **Add Package**
-6. 在 **Add to Target** 中勾选你的主 Target
+```swift
+dependencies: [
+    .package(path: "../Packages/StickyScrollKit")
+]
+```
 
-#### 方式二：Package.swift 依赖（远程仓库）
+#### 远程仓库（发布后）
 
 ```swift
 dependencies: [
@@ -28,43 +27,95 @@ dependencies: [
 ]
 ```
 
-## 主要组件
+#### Xcode 添加
 
-### Core - 嵌套滚动核心
+1. **File** → **Add Package Dependencies...**
+2. 输入仓库 URL 或点击 **Add Local...** 选择本地目录
+3. 在 Target 中勾选 **StickyScrollKit**
+
+---
+
+## 架构设计
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      StickyScrollKit                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │                   Components 层                          │   │
+│  │                                                         │   │
+│  │   ┌─────────────────────┐  ┌─────────────────────────┐  │   │
+│  │   │   StickyContainer   │  │       Menu              │  │   │
+│  │   │                     │  │                         │  │   │
+│  │   │ • StickyHeader-     │  │ • MenuItem              │  │   │
+│  │   │   ContainerView     │  │ • MenuView              │  │   │
+│  │   │ • StickyPageProtocol│  │ • MenuViewDelegate      │  │   │
+│  │   │ • StickyContainer-  │  │                         │  │   │
+│  │   │   DataSource        │  │                         │  │   │
+│  │   │ • StickyContainer-  │  │                         │  │   │
+│  │   │   Delegate          │  │                         │  │   │
+│  │   │ • DefaultStickyMenu │  │                         │  │   │
+│  │   └─────────────────────┘  └─────────────────────────┘  │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                              ▲                                  │
+│                              │ 依赖                             │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │                      Core 层                             │   │
+│  │                                                         │   │
+│  │   • NestedScrollChildProtocol     子视图协议            │   │
+│  │   • NestedScrollParentProtocol    父视图协议            │   │
+│  │   • NestedScrollContainerProtocol 容器协议（约定大于配置）│   │
+│  │   • NestedScrollManager           滚动状态管理器        │   │
+│  │   • NestedParentScrollView        手势排除 ScrollView   │   │
+│  │   • UIResponder.findNestedScrollContainer() 响应链扩展  │   │
+│  │                                                         │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## API 概览
+
+### Core 层
 
 | 组件 | 说明 |
 |-----|------|
-| `NestedScrollChildProtocol` | 子视图协议 |
-| `NestedScrollParentProtocol` | 父视图协议 |
-| `NestedScrollContainerProtocol` | 容器协议（约定大于配置） |
-| `NestedScrollManager` | 嵌套滚动管理器 |
-| `NestedParentScrollView` | 支持手势排除的 ScrollView |
+| `NestedScrollChildProtocol` | 子视图协议，提供 `childScrollView` 和 `canChildScroll` |
+| `NestedScrollParentProtocol` | 父视图协议，提供 `parentScrollView` 和 `headerHeight` |
+| `NestedScrollContainerProtocol` | 容器协议，支持响应链自动发现 |
+| `NestedScrollManager` | 管理父子视图滚动状态切换 |
+| `NestedParentScrollView` | 支持手势排除的 UIScrollView 子类 |
 
-### Components/Menu - 菜单组件
+### Components 层
 
 | 组件 | 说明 |
 |-----|------|
+| `StickyHeaderContainerView` | 通用吸顶容器视图（核心组件） |
+| `StickyContainerConfig` | 容器配置（menuHeight、stickyOffset 等） |
+| `StickyContainerDataSource` | 数据源协议（页面数量、标题、实例） |
+| `StickyContainerDelegate` | 代理协议（页面切换、滚动进度） |
+| `StickyPageProtocol` | 页面协议（获取滚动子视图、生命周期） |
+| `StickyMenuViewProtocol` | 菜单协议（可自定义菜单） |
+| `DefaultStickyMenuView` | 默认菜单实现 |
 | `MenuItem` | 菜单项模型 |
 | `MenuView` | 通用菜单视图 |
-| `MenuViewDelegate` | 菜单代理 |
 
-### Components/StickyContainer - 吸顶容器
-
-| 组件 | 说明 |
-|-----|------|
-| `StickyHeaderContainerView` | 通用吸顶容器视图 |
-| `StickyContainerConfig` | 容器配置 |
-| `StickyContainerDataSource` | 数据源协议 |
-| `StickyContainerDelegate` | 代理协议 |
-| `StickyPageProtocol` | 页面协议 |
-| `StickyMenuViewProtocol` | 菜单协议 |
-| `DefaultStickyMenuView` | 默认菜单实现 |
+---
 
 ## 快速开始
 
+### 1. 导入模块
+
 ```swift
 import StickyScrollKit
+```
 
+### 2. 创建容器
+
+```swift
 class MyViewController: UIViewController {
     
     private lazy var stickyContainer: StickyHeaderContainerView = {
@@ -74,50 +125,37 @@ class MyViewController: UIViewController {
         return container
     }()
     
-    private lazy var headerView: UIView = {
-        // 自定义头部视图
-        let view = UIView()
-        view.backgroundColor = .systemBlue
-        return view
-    }()
-    
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
-        configureContainer()
-    }
-    
-    override func viewSafeAreaInsetsDidChange() {
-        super.viewSafeAreaInsetsDidChange()
-        // ⚠️ 安全区域变化后更新 stickyOffset
-        let headerBarHeight = view.safeAreaInsets.top + 44
-        stickyContainer.updateStickyOffset(headerBarHeight)
-    }
-    
-    private func setupUI() {
+        
         view.addSubview(stickyContainer)
-        stickyContainer.snp.makeConstraints { make in
-            make.edges.equalToSuperview()
-        }
-    }
-    
-    private func configureContainer() {
+        stickyContainer.frame = view.bounds
+        
         let config = StickyContainerConfig(
             menuHeight: 48,
-            stickyOffset: 44, // 导航栏高度
+            stickyOffset: view.safeAreaInsets.top + 44,
             initialPageIndex: 0,
             bounces: true
         )
         
         stickyContainer.configure(
             with: config,
-            headerView: headerView,
-            menuView: nil // 使用默认菜单
+            headerView: myHeaderView,
+            menuView: nil  // 使用默认菜单
         )
     }
+    
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        // ⚠️ 安全区域变化后更新 stickyOffset
+        stickyContainer.updateStickyOffset(view.safeAreaInsets.top + 44)
+    }
 }
+```
 
-// MARK: - StickyContainerDataSource
+### 3. 实现数据源
+
+```swift
 extension MyViewController: StickyContainerDataSource {
     
     func numberOfPages(in container: StickyHeaderContainerView) -> Int {
@@ -137,23 +175,38 @@ extension MyViewController: StickyContainerDataSource {
         return page
     }
 }
+```
 
-// MARK: - StickyContainerDelegate
-extension MyViewController: StickyContainerDelegate {
+### 4. 实现页面协议
+
+```swift
+class MyPageViewController: UIViewController, StickyPageProtocol {
     
-    func stickyContainer(_ container: StickyHeaderContainerView, 
-                         didSwitchToPageAt index: Int) {
-        print("切换到页面 \(index)")
+    func getCurrentScrollableChild() -> NestedScrollChildProtocol? {
+        return contentViewController  // 返回包含 ScrollView 的子控制器
+    }
+    
+    func setScrollCallbacks(
+        onScroll: @escaping (UIScrollView) -> Void,
+        onChildChanged: @escaping (NestedScrollChildProtocol) -> Void
+    ) {
+        // 使用响应链方式时可留空
+    }
+    
+    func getAllHorizontalScrollViews() -> [UIScrollView] {
+        return [pageCollectionView]  // 返回内部水平滚动视图
     }
 }
 ```
 
+---
+
 ## 约定大于配置
 
-叶子节点（如 `WorksFlowViewController`）可以通过响应链自动发现容器：
+叶子节点通过响应链自动发现容器，**无需层层传递闭包**：
 
 ```swift
-class MyContentViewController: UIViewController, NestedScrollChildProtocol {
+class ContentViewController: UIViewController, NestedScrollChildProtocol {
     
     var childScrollView: UIScrollView { collectionView }
     var canChildScroll: Bool = false
@@ -174,7 +227,37 @@ class MyContentViewController: UIViewController, NestedScrollChildProtocol {
 }
 ```
 
+### 优势对比
+
+| 方面 | 闭包传递方式 | 响应链方式 |
+|-----|------------|----------|
+| 代码量 | 每层需传递闭包 | 叶子节点一次查找 |
+| 耦合度 | 层层依赖 | 仅依赖协议 |
+| 新增模块 | 需手动绑定 | 自动注册 |
+| 维护成本 | 高 | 低 |
+
+---
+
+## 目录结构
+
+```
+StickyScrollKit/
+├── Package.swift
+├── README.md
+└── Sources/StickyScrollKit/
+    ├── StickyScrollKit.swift           # 模块入口
+    ├── Core/
+    │   └── NestedScrollProtocol.swift  # 嵌套滚动核心协议与管理器
+    └── Components/
+        ├── Menu/
+        │   └── MenuView.swift          # 通用菜单组件
+        └── StickyContainer/
+            ├── StickyHeaderProtocol.swift      # 吸顶容器协议
+            └── StickyHeaderContainerView.swift # 吸顶容器视图
+```
+
+---
+
 ## License
 
 MIT
-

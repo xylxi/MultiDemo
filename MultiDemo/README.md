@@ -1,10 +1,105 @@
-# ProfileDemo - iOS 个人页面组件化框架
+# MultiDemo - iOS 个人页面组件化框架
 
-## 最低支持版本
+## 系统要求
 
 **iOS 13.0+**
 
-## 🆕 SPM 包集成
+---
+
+## 项目架构
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              App 层                                      │
+│                      (AppDelegate, SceneDelegate)                        │
+└─────────────────────────────────┬───────────────────────────────────────┘
+                                  │
+          ┌───────────────────────┼───────────────────────┐
+          ▼                       ▼                       ▼
+┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐
+│    Profile 模块      │ │   AssetFlow 模块     │ │    Common 模块      │
+│    (组装层)          │ │   (业务模块)         │ │   (叶子节点)        │
+│                     │ │                     │ │                     │
+│ ProfileViewController│ │ AppearanceVC        │ │ WorksFlowVC         │
+│ ProfileHeaderView   │ │ CreationVC          │ │                     │
+│                     │ │ InteractionVC       │ │                     │
+└─────────┬───────────┘ └─────────┬───────────┘ └─────────┬───────────┘
+          │                       │                       │
+          │      import StickyScrollKit                   │
+          └───────────────────────┴───────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        StickyScrollKit (SPM 包)                          │
+│                                                                         │
+│   ┌───────────────────────────────────────────────────────────────┐    │
+│   │                      Components 层                             │    │
+│   │   • StickyHeaderContainerView    通用吸顶容器                  │    │
+│   │   • StickyPageProtocol           页面协议                      │    │
+│   │   • MenuView                     通用菜单                      │    │
+│   └───────────────────────────────────────────────────────────────┘    │
+│                                  │                                      │
+│   ┌───────────────────────────────────────────────────────────────┐    │
+│   │                        Core 层                                 │    │
+│   │   • NestedScrollChildProtocol    子视图协议                    │    │
+│   │   • NestedScrollContainerProtocol 容器协议（约定大于配置）      │    │
+│   │   • NestedScrollManager          滚动状态管理器                │    │
+│   └───────────────────────────────────────────────────────────────┘    │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 目录结构
+
+```
+MultiDemo/
+│
+├── Packages/                               # 本地 SPM 包
+│   └── StickyScrollKit/                    # 通用吸顶滚动组件库
+│       ├── Package.swift
+│       ├── README.md                       # 组件库文档
+│       └── Sources/StickyScrollKit/
+│           ├── Core/                       # 嵌套滚动核心
+│           │   └── NestedScrollProtocol.swift
+│           └── Components/                 # 通用组件
+│               ├── Menu/
+│               │   └── MenuView.swift
+│               └── StickyContainer/
+│                   ├── StickyHeaderProtocol.swift
+│                   └── StickyHeaderContainerView.swift
+│
+├── MultiDemo/                              # 主应用
+│   ├── App/                                # 应用层
+│   │   ├── AppDelegate.swift
+│   │   └── SceneDelegate.swift
+│   │
+│   ├── Profile/                            # 个人页面模块
+│   │   ├── Container/
+│   │   │   └── ProfileViewController.swift # 使用 StickyHeaderContainerView
+│   │   └── Header/
+│   │       └── ProfileHeaderView.swift
+│   │
+│   ├── AssetFlow/                          # 资产流模块
+│   │   ├── Protocol/
+│   │   │   └── AssetFlowProtocol.swift     # 继承 StickyPageProtocol
+│   │   ├── Container/
+│   │   │   └── AssetFlowContainerView.swift
+│   │   └── Modules/                        # 业务子模块
+│   │       ├── Appearance/                 # 出境模块
+│   │       ├── Creation/                   # 创作模块
+│   │       └── Interaction/                # 互动模块
+│   │
+│   └── Common/                             # 公共业务组件
+│       └── WorksFlowViewController.swift   # 实现 NestedScrollChildProtocol
+│
+└── MultiDemo.xcodeproj/
+```
+
+---
+
+## SPM 包集成
 
 通用组件已封装为独立的 Swift Package：**StickyScrollKit**
 
@@ -26,104 +121,22 @@ class MyVC: UIViewController, NestedScrollChildProtocol { ... }
 
 // 使用吸顶容器
 let container = StickyHeaderContainerView()
-```
 
-## 目录结构
-
-```
-MultiDemo/
-│
-├── Packages/                               # 🆕 SPM 本地包
-│   └── StickyScrollKit/                    # 通用吸顶滚动组件库
-│       ├── Package.swift
-│       └── Sources/StickyScrollKit/
-│           ├── Core/                       # 嵌套滚动核心
-│           │   └── NestedScrollProtocol.swift
-│           └── Components/                 # 通用组件
-│               ├── Menu/
-│               │   └── MenuView.swift
-│               └── StickyContainer/
-│                   ├── StickyHeaderProtocol.swift
-│                   └── StickyHeaderContainerView.swift
-│
-├── MultiDemo/                              # 主应用
-│   ├── App/                                # 应用层
-│   │   ├── AppDelegate.swift
-│   │   └── SceneDelegate.swift
-│   │
-│   ├── Profile/                            # 个人页面模块
-│   │   ├── Container/
-│   │   │   └── ProfileViewController.swift
-│   │   └── Header/
-│   │       └── ProfileHeaderView.swift
-│   │
-│   ├── AssetFlow/                          # 资产流模块
-│   │   ├── Protocol/
-│   │   │   └── AssetFlowProtocol.swift
-│   │   ├── Container/
-│   │   │   └── AssetFlowContainerView.swift
-│   │   └── Modules/                        # 业务子模块
-│   │       ├── Appearance/
-│   │       ├── Creation/
-│   │       └── Interaction/
-│   │
-│   └── Common/                             # 公共业务组件
-│       └── WorksFlowViewController.swift
-│
-└── MultiDemo.xcodeproj/
-```
-
-## 🆕 通用吸顶组件（StickyHeaderContainerView）
-
-### 设计目标
-
-将吸顶功能抽取为独立的、**业务无关**的通用组件，支持：
-
-1. **Header 区域**：可自定义的头部视图（滚动时隐藏）
-2. **Menu 区域**：吸顶菜单（滚动到顶部后固定显示）
-3. **Page 区域**：分页内容容器（支持嵌套滚动）
-
-### 架构图
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        屏幕                                      │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │              导航栏 (stickyOffset 区域)                    │  │
-│  │                    始终可见                                │  │
-│  ├───────────────────────────────────────────────────────────┤  │
-│  │                                                           │  │
-│  │   StickyHeaderContainerView                               │  │
-│  │   ┌───────────────────────────────────────────────────┐   │  │
-│  │   │              headerView (可自定义)                 │   │  │
-│  │   │           （用户信息、Banner 等）                  │   │  │
-│  │   │              ← 滚动时隐藏                          │   │  │
-│  │   └───────────────────────────────────────────────────┘   │  │
-│  │   ┌───────────────────────────────────────────────────┐   │  │
-│  │   │              menuView (吸顶)                       │   │  │
-│  │   │           ← 滚动到顶部后固定在导航栏下方            │   │  │
-│  │   └───────────────────────────────────────────────────┘   │  │
-│  │   ┌───────────────────────────────────────────────────┐   │  │
-│  │   │           pageCollectionView                       │   │  │
-│  │   │      ┌─────┐ ┌─────┐ ┌─────┐                      │   │  │
-│  │   │      │Page1│ │Page2│ │Page3│ ...                  │   │  │
-│  │   │      └─────┘ └─────┘ └─────┘                      │   │  │
-│  │   │           ← 支持嵌套滚动                           │   │  │
-│  │   └───────────────────────────────────────────────────┘   │  │
-│  │                                                           │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+// 使用响应链自动发现容器
+if let container = view.findNestedScrollContainer() {
+    container.registerScrollableChild(self)
+}
 ```
 
 ---
 
 ## 快速接入指南
 
-### 方式一：直接使用 StickyHeaderContainerView（推荐）
-
-#### 1. 创建容器并配置
+### 方式一：直接使用 StickyHeaderContainerView
 
 ```swift
+import StickyScrollKit
+
 class MyViewController: UIViewController {
     
     private lazy var stickyContainer: StickyHeaderContainerView = {
@@ -133,71 +146,42 @@ class MyViewController: UIViewController {
         return container
     }()
     
-    /// 自定义头部视图
-    private lazy var myHeaderView: UIView = {
-        let view = MyCustomHeaderView()
-        // 配置头部视图...
-        return view
-    }()
-    
-    /// 导航栏高度（安全区域 + 内容高度）
-    private var headerBarHeight: CGFloat {
-        return view.safeAreaInsets.top + 44
-    }
-    
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
-        configureContainer()
-    }
-    
-    override func viewSafeAreaInsetsDidChange() {
-        super.viewSafeAreaInsetsDidChange()
-        // ⚠️ 重要：安全区域变化后更新 stickyOffset
-        stickyContainer.updateStickyOffset(headerBarHeight)
-    }
-    
-    private func setupUI() {
+        
         view.addSubview(stickyContainer)
         stickyContainer.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
-    }
-    
-    private func configureContainer() {
+        
         let config = StickyContainerConfig(
-            menuHeight: 48,                    // 菜单高度
-            stickyOffset: headerBarHeight,     // 导航栏高度（吸顶位置）
-            initialPageIndex: 0,               // 初始页面索引
-            bounces: true                      // 是否启用弹性效果
+            menuHeight: 48,
+            stickyOffset: view.safeAreaInsets.top + 44,
+            initialPageIndex: 0,
+            bounces: true
         )
         
         stickyContainer.configure(
             with: config,
-            headerView: myHeaderView,          // 自定义头部
-            menuView: nil                      // nil 使用默认菜单
+            headerView: myHeaderView,
+            menuView: nil
         )
     }
-}
-```
-
-#### 2. 实现数据源协议
-
-```swift
-extension MyViewController: StickyContainerDataSource {
     
-    /// 返回页面数量
-    func numberOfPages(in container: StickyHeaderContainerView) -> Int {
-        return 3
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        stickyContainer.updateStickyOffset(view.safeAreaInsets.top + 44)
     }
+}
+
+extension MyViewController: StickyContainerDataSource {
+    func numberOfPages(in container: StickyHeaderContainerView) -> Int { 3 }
     
-    /// 返回每个页面的标题（用于菜单显示）
     func stickyContainer(_ container: StickyHeaderContainerView, 
                          titleForPageAt index: Int) -> String {
-        return ["Tab1", "Tab2", "Tab3"][index]
+        ["Tab1", "Tab2", "Tab3"][index]
     }
     
-    /// 创建页面（懒加载，只在需要时调用）
     func stickyContainer(_ container: StickyHeaderContainerView, 
                          pageAt index: Int) -> StickyPageProtocol {
         let page = MyPageViewController(index: index)
@@ -208,176 +192,54 @@ extension MyViewController: StickyContainerDataSource {
 }
 ```
 
-#### 3. 实现代理协议（可选）
+### 方式二：使用 ProfileViewController
 
 ```swift
-extension MyViewController: StickyContainerDelegate {
-    
-    /// 页面切换回调
-    func stickyContainer(_ container: StickyHeaderContainerView, 
-                         didSwitchToPageAt index: Int) {
-        print("切换到页面 \(index)")
-    }
-    
-    /// 滚动进度回调（0~1，可用于更新导航栏透明度）
-    func stickyContainer(_ container: StickyHeaderContainerView, 
-                         scrollProgressDidChange progress: CGFloat) {
-        navigationBar.alpha = progress
-    }
-    
-    /// 页面加载完成回调
-    func stickyContainer(_ container: StickyHeaderContainerView, 
-                         didLoadPageAt index: Int, 
-                         page: StickyPageProtocol) {
-        print("页面 \(index) 加载完成")
-    }
-}
+let profileVC = ProfileViewController()
+profileVC.assetFlowDataSource = MyAssetFlowDataSource()
+profileVC.defaultAssetFlowIndex = 1
 ```
 
-#### 4. 实现子页面协议
+---
 
-每个分页内容需要实现 `StickyPageProtocol`：
+## 约定大于配置
 
-```swift
-class MyPageViewController: UIViewController, StickyPageProtocol {
-    
-    private var worksVC: WorksFlowViewController?
-    
-    // MARK: - StickyPageProtocol
-    
-    /// 返回当前可滚动的子视图
-    func getCurrentScrollableChild() -> NestedScrollChildProtocol? {
-        if worksVC == nil {
-            worksVC = loadWorksVC()
-        }
-        return worksVC
-    }
-    
-    /// 设置滚动回调（使用响应链方式时可留空）
-    func setScrollCallbacks(
-        onScroll: @escaping (UIScrollView) -> Void,
-        onChildChanged: @escaping (NestedScrollChildProtocol) -> Void
-    ) {
-        // ✅ 约定大于配置：子视图通过响应链自动发现容器
-        // 无需手动绑定闭包
-    }
-    
-    func getAllHorizontalScrollViews() -> [UIScrollView] {
-        return [pageCollectionView]
-    }
-    
-    func pageWillAppear() { }
-    func pageDidAppear() { }
-    func pageWillDisappear() { }
-    func pageDidDisappear() { }
-    
-    private func loadWorksVC() -> WorksFlowViewController {
-        let vc = WorksFlowViewController(...)
-        // ✅ 不需要手动绑定闭包，WorksFlowViewController 会自动注册
-        addChild(vc)
-        vc.didMove(toParent: self)
-        return vc
-    }
-}
-```
-
-#### 5. 叶子节点自动注册（约定大于配置）
-
-`WorksFlowViewController` 等叶子节点会在 `viewDidAppear` 时自动注册：
+叶子节点通过响应链自动发现容器，**无需层层传递闭包**：
 
 ```swift
 class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
+    
+    var childScrollView: UIScrollView { collectionView }
+    var canChildScroll: Bool = false
     
     private weak var nestedContainer: NestedScrollContainerProtocol?
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        // ✅ 约定：自动通过响应链查找容器并注册
+        // ✅ 自动发现容器并注册
         nestedContainer = view.findNestedScrollContainer()
         nestedContainer?.registerScrollableChild(self)
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        // ✅ 约定：自动调用容器处理滚动
+        // ✅ 自动调用容器处理滚动
         nestedContainer?.handleChildScroll(scrollView)
     }
 }
 ```
 
----
+### 优势对比
 
-### 方式二：使用 ProfileViewController（个人页面场景）
-
-如果是个人页面场景，可以直接使用封装好的 `ProfileViewController`：
-
-```swift
-// 1. 创建 ProfileViewController
-let profileVC = ProfileViewController()
-
-// 2. 设置默认定位的页面索引（可选，默认为 0）
-profileVC.defaultAssetFlowIndex = 1  // 定位到创作模块
-
-// 3. 配置用户信息
-profileVC.configureProfile(UserProfile(
-    avatar: "avatar_url",
-    name: "用户名",
-    userId: "user_id",
-    bio: "个人简介",
-    followingCount: 100,
-    followersCount: 1000,
-    likesCount: 5000
-))
-
-// 4. 注入资产流数据源
-profileVC.assetFlowDataSource = MyAssetFlowDataSource()
-
-// 5. 设置代理（可选）
-profileVC.assetFlowDelegate = self
-```
-
-实现数据源：
-
-```swift
-class MyAssetFlowDataSource: AssetFlowDataSource {
-    func assetFlowConfigs() -> [AssetFlowConfig] {
-        return [
-            AssetFlowConfig(title: "出境") {
-                return AppearanceViewController()
-            },
-            AssetFlowConfig(title: "创作") {
-                return CreationViewController()
-            }
-        ]
-    }
-}
-```
+| 方面 | 改造前 | 闭包方式 | 响应链方式 |
+|-----|-------|---------|-----------|
+| 业务模块依赖 | ❌ 直接依赖 Manager | ✅ 仅依赖闭包 | ✅✅ 仅依赖协议 |
+| 代码复杂度 | ❌ 高 | ⚠️ 需层层传递 | ✅ 自动发现 |
+| 新增模块 | ❌ 需修改多处 | ⚠️ 需绑定闭包 | ✅ 自动注册 |
+| 多团队协作 | ❌ 需理解滚动管理 | ✅ 只需实现协议 | ✅✅ 遵循约定即可 |
 
 ---
 
 ## 协议规范
-
-### 🆕 NestedScrollContainerProtocol（约定大于配置）
-
-采用"约定大于配置"原则，子视图通过响应链自动发现容器，**无需层层传递闭包**：
-
-```swift
-/// 容器协议 - StickyHeaderContainerView 已实现
-public protocol NestedScrollContainerProtocol: AnyObject {
-    func registerScrollableChild(_ child: NestedScrollChildProtocol)
-    func handleChildScroll(_ scrollView: UIScrollView)
-}
-
-/// 响应链扩展
-extension UIResponder {
-    func findNestedScrollContainer() -> NestedScrollContainerProtocol?
-}
-```
-
-| 方面 | 闭包方式 | 响应链方式（推荐） |
-|------|---------|------------------|
-| 代码量 | 每层传递闭包 | 叶子节点一次查找 |
-| 耦合度 | 层层依赖 | 只依赖协议 |
-| 新增模块 | 需手动绑定 | 自动注册 |
 
 ### StickyPageProtocol
 
@@ -385,20 +247,14 @@ extension UIResponder {
 
 ```swift
 public protocol StickyPageProtocol: UIViewController {
-    
-    /// 获取当前可滚动的子视图（用于嵌套滚动联动）
     func getCurrentScrollableChild() -> NestedScrollChildProtocol?
-    
-    /// 设置滚动事件回调
     func setScrollCallbacks(
         onScroll: @escaping (UIScrollView) -> Void,
         onChildChanged: @escaping (NestedScrollChildProtocol) -> Void
     )
-    
-    /// 获取内部所有水平滚动的 ScrollView（用于手势排除）
     func getAllHorizontalScrollViews() -> [UIScrollView]
     
-    // MARK: - 页面生命周期（有默认空实现）
+    // 页面生命周期（有默认空实现）
     func pageWillAppear()
     func pageDidAppear()
     func pageWillDisappear()
@@ -408,37 +264,50 @@ public protocol StickyPageProtocol: UIViewController {
 
 ### NestedScrollChildProtocol
 
-叶子节点（如 WorksFlowViewController）需要实现此协议：
+叶子节点需要实现此协议：
 
 ```swift
 public protocol NestedScrollChildProtocol: AnyObject {
-    /// 子视图的 ScrollView
     var childScrollView: UIScrollView { get }
-    
-    /// 是否允许子视图滚动（由 NestedScrollManager 控制）
     var canChildScroll: Bool { get set }
 }
 ```
 
-### StickyContainerConfig
+### NestedScrollContainerProtocol
 
-容器配置参数：
+容器协议（StickyHeaderContainerView 已实现）：
 
 ```swift
-public struct StickyContainerConfig {
-    /// 菜单高度（默认 48）
-    public var menuHeight: CGFloat
-    
-    /// 吸顶偏移量（顶部始终显示的高度，如导航栏高度）
-    public var stickyOffset: CGFloat
-    
-    /// 初始选中的页面索引（默认 0）
-    public var initialPageIndex: Int
-    
-    /// 是否启用弹性效果（默认 true）
-    public var bounces: Bool
+public protocol NestedScrollContainerProtocol: AnyObject {
+    func registerScrollableChild(_ child: NestedScrollChildProtocol)
+    func handleChildScroll(_ scrollView: UIScrollView)
 }
 ```
+
+---
+
+## 多团队协作
+
+| 目录/模块 | 负责团队 | 依赖 |
+|---------|---------|-----|
+| `Packages/StickyScrollKit/` | 基础架构组 | SnapKit |
+| `Profile/` | 个人页面组 | StickyScrollKit |
+| `AssetFlow/Protocol/` | 个人页面组 | StickyScrollKit |
+| `AssetFlow/Modules/Appearance/` | 出境业务组 | AssetFlowProtocol |
+| `AssetFlow/Modules/Creation/` | 创作业务组 | AssetFlowProtocol |
+| `AssetFlow/Modules/Interaction/` | 互动业务组 | AssetFlowProtocol |
+| `Common/` | 公共组件组 | StickyScrollKit |
+
+---
+
+## 组件化拆分建议
+
+| 组件 | SPM 包名 | 说明 | 依赖 |
+|-----|---------|------|-----|
+| 核心 + 通用组件 | `StickyScrollKit` | 嵌套滚动核心 + 吸顶容器 + 菜单 | SnapKit |
+| 个人页面框架 | `ProfileKit` | ProfileViewController + Header | StickyScrollKit |
+| 资产流协议 | `AssetFlowProtocol` | 资产流协议定义 | StickyScrollKit |
+| 各业务模块 | 独立 Pod/SPM | 各团队独立维护 | AssetFlowProtocol |
 
 ---
 
@@ -446,22 +315,17 @@ public struct StickyContainerConfig {
 
 ### 1. 安全区域处理
 
-由于 `viewDidLoad` 时 `safeAreaInsets` 可能还未正确设置，需要在 `viewSafeAreaInsetsDidChange` 中更新 `stickyOffset`：
-
 ```swift
 override func viewSafeAreaInsetsDidChange() {
     super.viewSafeAreaInsetsDidChange()
-    stickyContainer.updateStickyOffset(headerBarHeight)
+    stickyContainer.updateStickyOffset(view.safeAreaInsets.top + 44)
 }
 ```
 
 ### 2. 子页面懒加载
 
-在 `getCurrentScrollableChild()` 中，如果子视图还没加载，**必须先加载它**：
-
 ```swift
 func getCurrentScrollableChild() -> NestedScrollChildProtocol? {
-    // ⚠️ 确保子视图已加载
     if worksVC == nil {
         worksVC = loadWorksVC()
     }
@@ -469,103 +333,16 @@ func getCurrentScrollableChild() -> NestedScrollChildProtocol? {
 }
 ```
 
-### 3. 滚动回调绑定
+### 3. 闭包与响应链优先级
 
-**推荐方式：响应链自动注册**（约定大于配置）
-
-无需手动绑定，叶子节点会自动通过响应链发现容器：
+如果设置了 `onScrollEvent` 闭包，会优先使用闭包方式，不会走响应链：
 
 ```swift
-// WorksFlowViewController 内部已实现，无需额外代码
-override func viewDidAppear(_ animated: Bool) {
-    super.viewDidAppear(animated)
-    nestedContainer = view.findNestedScrollContainer()
-    nestedContainer?.registerScrollableChild(self)
+// 优先使用闭包（向后兼容）
+if let handler = onScrollEvent {
+    handler(scrollView)
+} else {
+    // 使用响应链
+    nestedContainer?.handleChildScroll(scrollView)
 }
 ```
-
-**兼容方式：手动闭包绑定**
-
-如需向后兼容或特殊场景，可手动绑定闭包：
-
-```swift
-worksVC.onScrollEvent = { [weak self] scrollView in
-    self?.onScrollEvent?(scrollView)  // 传递给容器
-}
-```
-
-> ⚠️ 如果设置了 `onScrollEvent` 闭包，会优先使用闭包方式，不会走响应链
-
----
-
-## 层级依赖关系
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                          App 层                                  │
-│                    (AppDelegate, SceneDelegate)                  │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        ▼                     ▼                     ▼
-┌───────────────────┐ ┌───────────────────┐ ┌───────────────────┐
-│   Profile 模块     │ │  AssetFlow 模块    │ │    Common 模块    │
-│   (组装层)         │ │  (业务模块)        │ │   (叶子节点)       │
-└─────────┬─────────┘ └─────────┬─────────┘ └─────────┬─────────┘
-          │                     │                     │
-          └──────────┬──────────┴──────────┬──────────┘
-                     ▼                     ▼
-        ┌─────────────────────────────────────────────┐
-        │               Components 层                  │
-        │   (MenuView, StickyHeaderContainerView)     │
-        └─────────────────────┬───────────────────────┘
-                              ▼
-        ┌─────────────────────────────────────────────┐
-        │                  Core 层                     │
-        │     (NestedScrollProtocol, Manager)         │
-        │                                             │
-        │  ⚠️ 只有 StickyContainer 依赖此层           │
-        │  业务模块通过闭包回调，不直接依赖            │
-        └─────────────────────────────────────────────┘
-```
-
----
-
-## 解耦收益
-
-| 对比项 | 改造前 | 闭包方式 | 响应链方式 |
-|--------|-------|---------|-----------|
-| 业务模块依赖 | ❌ 直接依赖 Manager | ✅ 仅依赖闭包类型 | ✅✅ 仅依赖协议 |
-| 代码复杂度 | ❌ 高 | ⚠️ 需层层传递 | ✅ 自动发现 |
-| 吸顶组件复用 | ❌ 与业务耦合 | ✅ 通用组件 | ✅ 通用组件 |
-| 独立发布 | ❌ 无法独立 | ✅ 可独立发布 | ✅ 可独立发布 |
-| 新增模块 | ❌ 需修改多处 | ⚠️ 需绑定闭包 | ✅ 自动注册 |
-| 多团队协作 | ❌ 需理解滚动管理 | ✅ 只需实现协议 | ✅✅ 遵循约定即可 |
-
----
-
-## 组件化拆分建议
-
-| 组件 | Pod/SPM 名称建议 | 说明 | 依赖 |
-|------|-----------------|------|------|
-| Core | `ProfileCore` | 嵌套滚动核心协议 | 无 |
-| Components | `ProfileComponents` | 通用 UI 组件（含 StickyContainer） | Core |
-| Profile | `ProfileContainer` | 个人页面容器框架 | Core, Components |
-| AssetFlow/Protocol | `AssetFlowProtocol` | 资产流协议（接口层） | Core (仅协议类型) |
-| AssetFlow/Modules/* | 各业务独立 Pod | 各团队独立维护 | Protocol |
-| Common | `ProfileCommon` | 公共业务组件 | Core (仅协议类型) |
-
----
-
-## 多团队协作
-
-| 目录 | 负责团队 | 依赖说明 |
-|------|---------|---------|
-| `Core/` | 基础架构组 | 无外部依赖 |
-| `Components/` | 基础架构组 | 依赖 Core |
-| `Components/StickyContainer/` | 基础架构组 | 依赖 Core |
-| `Profile/` | 个人页面组 | 组装层，依赖 Components |
-| `AssetFlow/Protocol/` | 个人页面组 | 仅协议定义 |
-| `AssetFlow/Modules/Appearance/` | 出境业务组 | 仅依赖 Protocol |
-| `AssetFlow/Modules/Creation/` | 创作业务组 | 仅依赖 Protocol |
-| `Common/` | 公共组件组 | 仅依赖 Core 协议类型 |
