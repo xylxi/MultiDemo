@@ -168,6 +168,10 @@ public class NestedScrollManager: NSObject {
         }
     }
     
+    public override init() {
+        super.init()
+    }
+    
     /// 处理父视图滚动
     public func handleParentScroll(_ scrollView: UIScrollView) {
         guard let parent = parent else { return }
@@ -226,14 +230,6 @@ public class NestedScrollManager: NSObject {
                 scrollView.contentOffset.y = lockedOffset
                 return
             }
-            // todo: wzhw 保留弹簧效果
-//            // 允许向下滚动（减少 offset）
-//            if offsetY <= 0 {
-//                scrollView.contentOffset.y = 0
-//                lockedOffsets[scrollViewId] = 0
-//            } else {
-//                lockedOffsets[scrollViewId] = offsetY
-//            }
             // 允许向下滚动（减少 offset），不强制设为 0 以保留 bounces 效果
             lockedOffsets[scrollViewId] = max(0, offsetY)
             return
@@ -254,3 +250,4 @@ public class NestedScrollManager: NSObject {
         }
     }
 }
+

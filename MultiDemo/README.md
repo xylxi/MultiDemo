@@ -4,47 +4,73 @@
 
 **iOS 13.0+**
 
+## 🆕 SPM 包集成
+
+通用组件已封装为独立的 Swift Package：**StickyScrollKit**
+
+### 安装方式
+
+1. 打开 Xcode 项目
+2. 选择 **File** → **Add Package Dependencies...**
+3. 点击 **Add Local...**
+4. 选择 `Packages/StickyScrollKit` 目录
+5. 在 Target 中勾选 **StickyScrollKit**
+
+### 使用方式
+
+```swift
+import StickyScrollKit
+
+// 使用嵌套滚动协议
+class MyVC: UIViewController, NestedScrollChildProtocol { ... }
+
+// 使用吸顶容器
+let container = StickyHeaderContainerView()
+```
+
 ## 目录结构
 
 ```
-ProfileDemo/
+MultiDemo/
 │
-├── App/                                    # 应用层
-│   ├── AppDelegate.swift                   # App 生命周期
-│   ├── SceneDelegate.swift                 # Scene 生命周期
-│   └── Info.plist                          # 应用配置
+├── Packages/                               # 🆕 SPM 本地包
+│   └── StickyScrollKit/                    # 通用吸顶滚动组件库
+│       ├── Package.swift
+│       └── Sources/StickyScrollKit/
+│           ├── Core/                       # 嵌套滚动核心
+│           │   └── NestedScrollProtocol.swift
+│           └── Components/                 # 通用组件
+│               ├── Menu/
+│               │   └── MenuView.swift
+│               └── StickyContainer/
+│                   ├── StickyHeaderProtocol.swift
+│                   └── StickyHeaderContainerView.swift
 │
-├── Core/                                   # 核心层（可独立成 Pod/SPM）
-│   └── ScrollManager/
-│       └── NestedScrollProtocol.swift      # 嵌套滚动协议与管理器
+├── MultiDemo/                              # 主应用
+│   ├── App/                                # 应用层
+│   │   ├── AppDelegate.swift
+│   │   └── SceneDelegate.swift
+│   │
+│   ├── Profile/                            # 个人页面模块
+│   │   ├── Container/
+│   │   │   └── ProfileViewController.swift
+│   │   └── Header/
+│   │       └── ProfileHeaderView.swift
+│   │
+│   ├── AssetFlow/                          # 资产流模块
+│   │   ├── Protocol/
+│   │   │   └── AssetFlowProtocol.swift
+│   │   ├── Container/
+│   │   │   └── AssetFlowContainerView.swift
+│   │   └── Modules/                        # 业务子模块
+│   │       ├── Appearance/
+│   │       ├── Creation/
+│   │       └── Interaction/
+│   │
+│   └── Common/                             # 公共业务组件
+│       └── WorksFlowViewController.swift
 │
-├── Components/                             # 通用组件层（可独立成 Pod/SPM）
-│   ├── Menu/
-│   │   └── MenuView.swift                  # 分类菜单组件
-│   ├── StickyContainer/                    # 🆕 通用吸顶容器
-│   │   ├── StickyHeaderProtocol.swift      # 吸顶容器协议规范
-│   │   └── StickyHeaderContainerView.swift # 通用吸顶容器视图
-│   └── PageContainer/                      # 预留：分页容器组件
-│
-├── Profile/                                # 个人页面模块（可独立成 Pod/SPM）
-│   ├── Container/
-│   │   └── ProfileViewController.swift     # 个人页面容器（组装层）
-│   └── Header/
-│       └── ProfileHeaderView.swift         # 用户信息头部 + HeaderBar
-│
-├── AssetFlow/                              # 资产流模块（可独立成 Pod/SPM）
-│   ├── Protocol/
-│   │   └── AssetFlowProtocol.swift         # 资产流协议规范 + 闭包类型定义
-│   ├── Container/
-│   │   └── AssetFlowContainerView.swift    # 资产流容器视图（可选使用）
-│   └── Modules/                            # 业务子模块（各团队独立开发）
-│       ├── Appearance/
-│       │   └── AppearanceViewController.swift  # 出境模块
-│       └── Creation/
-│           └── CreationViewController.swift    # 创作模块
-│
-└── Common/                                 # 公共业务组件
-    └── WorksFlowViewController.swift       # 作品流列表（叶子节点）
+└── MultiDemo.xcodeproj/
 ```
 
 ## 🆕 通用吸顶组件（StickyHeaderContainerView）

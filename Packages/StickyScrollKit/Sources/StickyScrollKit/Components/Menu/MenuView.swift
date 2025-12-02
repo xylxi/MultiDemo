@@ -24,6 +24,9 @@ public class MenuView: UIView {
     
     public weak var delegate: MenuViewDelegate?
     
+    /// 菜单项选中回调（用于闭包方式）
+    public var onItemSelected: ((Int) -> Void)?
+    
     private var items: [MenuItem] = []
     private var buttons: [UIButton] = []
     private var selectedIndex: Int = 0
@@ -45,7 +48,7 @@ public class MenuView: UIView {
     
     private var indicatorCenterXConstraint: Constraint?
     
-    override init(frame: CGRect) {
+    public override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
     }
@@ -117,6 +120,7 @@ public class MenuView: UIView {
         let index = sender.tag
         selectItem(at: index, animated: true)
         delegate?.menuView(self, didSelectItemAt: index)
+        onItemSelected?(index)
     }
     
     public func selectItem(at index: Int, animated: Bool = true) {
@@ -149,3 +153,4 @@ public class MenuView: UIView {
         }
     }
 }
+
