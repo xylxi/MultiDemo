@@ -42,7 +42,7 @@ class ProfileAssetFlowDataSource: AssetFlowDataSource, AssetFlowDelegate {
         return [
             // 出境模块 - 由开发者 A 开发
             AssetFlowConfig(title: "出境") {
-                return AppearanceViewController()
+                return AppearanceViewControllerRefactored()
             },
             
             // 创作模块 - 由开发者 B 开发

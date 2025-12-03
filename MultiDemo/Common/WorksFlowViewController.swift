@@ -1,6 +1,7 @@
 import UIKit
 import SnapKit
 import StickyScrollKit
+import ViewPagerKit
 
 // MARK: - ================== 作品流 ==================
 
@@ -10,7 +11,11 @@ import StickyScrollKit
 /// 解耦设计：
 /// - 方式一（推荐）：通过响应链自动发现容器，无需手动绑定
 /// - 方式二（兼容）：通过闭包回调处理滚动事件
-class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
+class WorksFlowViewController: UIViewController, NestedScrollChildProtocol, ViewPagerScrollablePageProtocol {
+    
+    // MARK: - ViewPagerScrollablePageProtocol
+    /// 返回页面的主 ScrollView，用于 ViewPager 保存/恢复滚动位置
+    var pageScrollView: UIScrollView? { collectionView }
     
     // MARK: - NestedScrollChildProtocol
     var childScrollView: UIScrollView { collectionView }
@@ -52,10 +57,15 @@ class WorksFlowViewController: UIViewController, NestedScrollChildProtocol {
         self.categoryPath = categoryPath
         self.color = color
         super.init(nibName: nil, bundle: nil)
+        print("🟢 [WorksFlowVC] init: \(categoryPath)")
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        print("🔴 [WorksFlowVC] deinit: \(categoryPath) ← 页面已被回收释放内存")
     }
     
     // MARK: - Lifecycle

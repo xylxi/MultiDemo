@@ -40,7 +40,7 @@ class ProfileViewController: UIViewController {
     /// ```
     /// 
     /// 注意：此属性应在设置 `assetFlowDataSource` 之前设置，或在 `reloadAssetFlows()` 之前设置
-    var defaultAssetFlowIndex: Int = 1
+    var defaultAssetFlowIndex: Int = 0
     
     /// 嵌套滚动管理器（暴露给外部使用）
     var scrollManager: NestedScrollManager {

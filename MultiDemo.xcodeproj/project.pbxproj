@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3B7CCA022EDFB8FF003ACD36 /* ViewPagerKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3B7CCA012EDFB8FF003ACD36 /* ViewPagerKit */; };
 		3B92A89C2EDC132600A21E8D /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3B92A89B2EDC132600A21E8D /* SnapKit */; };
 		3B9DFC132EDB41F600C32276 /* LookinServer in Frameworks */ = {isa = PBXBuildFile; productRef = 3B9DFC122EDB41F600C32276 /* LookinServer */; };
 		3BA1B2C02EE0000100000001 /* StickyScrollKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3BA1B2C12EE0000100000001 /* StickyScrollKit */; };
@@ -44,6 +45,7 @@
 			files = (
 				3B9DFC132EDB41F600C32276 /* LookinServer in Frameworks */,
 				3B92A89C2EDC132600A21E8D /* SnapKit in Frameworks */,
+				3B7CCA022EDFB8FF003ACD36 /* ViewPagerKit in Frameworks */,
 				3BA1B2C02EE0000100000001 /* StickyScrollKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -90,6 +92,7 @@
 				3B9DFC122EDB41F600C32276 /* LookinServer */,
 				3B92A89B2EDC132600A21E8D /* SnapKit */,
 				3BA1B2C12EE0000100000001 /* StickyScrollKit */,
+				3B7CCA012EDFB8FF003ACD36 /* ViewPagerKit */,
 			);
 			productName = MultiDemo;
 			productReference = 3B9DFBE72EDB3FF300C32276 /* MultiDemo.app */;
@@ -123,6 +126,7 @@
 				3B9DFC112EDB41F600C32276 /* XCLocalSwiftPackageReference "../../Documents/iOS4app/LookinServer" */,
 				3B92A89A2EDC132600A21E8D /* XCLocalSwiftPackageReference "../../Documents/iOS4app/SnapKit" */,
 				3BA1B2C22EE0000100000001 /* XCLocalSwiftPackageReference "Packages/StickyScrollKit" */,
+				3B7CCA002EDFB8FF003ACD36 /* XCLocalSwiftPackageReference "Packages/ViewPagerKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3B9DFBE82EDB3FF300C32276 /* Products */;
@@ -178,7 +182,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.ruir.uikittest.MultiDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = NO;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
@@ -210,7 +214,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.ruir.uikittest.MultiDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = NO;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
@@ -364,6 +368,10 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		3B7CCA002EDFB8FF003ACD36 /* XCLocalSwiftPackageReference "Packages/ViewPagerKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/ViewPagerKit;
+		};
 		3B92A89A2EDC132600A21E8D /* XCLocalSwiftPackageReference "../../Documents/iOS4app/SnapKit" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../../Documents/iOS4app/SnapKit;
@@ -379,6 +387,10 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		3B7CCA012EDFB8FF003ACD36 /* ViewPagerKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ViewPagerKit;
+		};
 		3B92A89B2EDC132600A21E8D /* SnapKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SnapKit;
