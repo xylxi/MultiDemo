@@ -119,6 +119,35 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
     private var headerHeightConstraint: Constraint?
     private var pageContainerHeightConstraint: Constraint?
     
+    // MARK: - DiffableDataSource
+    
+    /// 分页 Section 枚举
+    private enum PageSection: Hashable {
+        case main
+    }
+    
+    /// 分页 Item 模型
+    private struct PageItem: Hashable {
+        let index: Int
+        let identifier: UUID  // 确保唯一性
+        
+        init(index: Int) {
+            self.index = index
+            self.identifier = UUID()
+        }
+        
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(index)
+        }
+        
+        static func == (lhs: PageItem, rhs: PageItem) -> Bool {
+            return lhs.index == rhs.index
+        }
+    }
+    
+    /// DiffableDataSource
+    private var diffableDataSource: UICollectionViewDiffableDataSource<PageSection, PageItem>?
+    
     // MARK: - UI Components
     
     private lazy var _mainScrollView: NestedParentScrollView = {
@@ -145,12 +174,10 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
         cv.isPagingEnabled = true
         cv.showsHorizontalScrollIndicator = false
         cv.delegate = self
-        cv.dataSource = self
+        // 使用 DiffableDataSource，不再设置 dataSource = self
         cv.register(StickyPageCell.self, forCellWithReuseIdentifier: StickyPageCell.reuseId)
         cv.contentInsetAdjustmentBehavior = .never
-        if #available(iOS 10.0, *) {
-            cv.isPrefetchingEnabled = false
-        }
+        cv.isPrefetchingEnabled = false
         return cv
     }()
     
@@ -232,7 +259,8 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
             menuView?.selectItem(at: validIndex, animated: false)
         }
         
-        pageCollectionView.reloadData()
+        // ⭐️ 使用 DiffableDataSource 的 snapshot 更新数据
+        applySnapshot(animatingDifferences: false)
         
         // 滚动到初始位置
         if pageCount > 0 && validIndex > 0 {
@@ -262,6 +290,17 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
             self.layoutIfNeeded()
             self.updateContentSize()
         }
+    }
+    
+    /// 应用 snapshot 更新 CollectionView
+    private func applySnapshot(animatingDifferences: Bool = true) {
+        var snapshot = NSDiffableDataSourceSnapshot<PageSection, PageItem>()
+        snapshot.appendSections([.main])
+        
+        let items = (0..<pageCount).map { PageItem(index: $0) }
+        snapshot.appendItems(items, toSection: .main)
+        
+        diffableDataSource?.apply(snapshot, animatingDifferences: animatingDifferences)
     }
     
     /// 滚动到指定页面
@@ -367,6 +406,34 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
         
         // 设置 scrollManager
         scrollManager.parentView = self
+        
+        // 配置 DiffableDataSource
+        setupDiffableDataSource()
+    }
+    
+    /// 配置 DiffableDataSource
+    private func setupDiffableDataSource() {
+        diffableDataSource = UICollectionViewDiffableDataSource<PageSection, PageItem>(
+            collectionView: pageCollectionView
+        ) { [weak self] collectionView, indexPath, item in
+            guard let self = self else { return UICollectionViewCell() }
+            
+            let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: StickyPageCell.reuseId,
+                for: indexPath
+            ) as! StickyPageCell
+            
+            let index = item.index
+            
+            // 配置 cell 内容
+            if let page = self.loadedPages[index] {
+                cell.configure(with: page.view)
+            } else {
+                cell.configure(with: UIView())
+            }
+            
+            return cell
+        }
     }
     
     private func setupHeaderConstraints() {
@@ -510,27 +577,13 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
     }
 }
 
-// MARK: - UICollectionViewDataSource
-extension StickyHeaderContainerView: UICollectionViewDataSource {
-    public func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return pageCount
-    }
-    
-    public func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: StickyPageCell.reuseId, for: indexPath) as! StickyPageCell
-        
-        let index = indexPath.item
-        
-        if let page = loadedPages[index] {
-            cell.configure(with: page.view)
-        } else {
-            cell.configure(with: UIView())
-        }
-        
-        return cell
-    }
-    
+// MARK: - UICollectionViewDelegate (willDisplay)
+extension StickyHeaderContainerView {
+    /// 当 Cell 即将显示时加载页面内容
     public func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        // 只处理 pageCollectionView
+        guard collectionView === pageCollectionView else { return }
+        
         let index = indexPath.item
         
         if loadedPages[index] == nil {
