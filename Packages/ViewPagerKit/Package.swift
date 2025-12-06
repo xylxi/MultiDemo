@@ -14,7 +14,7 @@ let package = Package(
             targets: ["ViewPagerKit"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/SnapKit/SnapKit.git", from: "5.6.0")
+        .package(path: "/Users/ruir/Documents/iOS4app/SnapKit")
     ],
     targets: [
         .target(
