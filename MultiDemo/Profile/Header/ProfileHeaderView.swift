@@ -210,10 +210,13 @@ class ProfileHeaderView: UIView {
 // MARK: - ================== 顶部导航栏 ==================
 
 class ProfileHeaderBar: UIView {
-    
+
+    /// 返回按钮点击回调
+    var onBackButtonTapped: (() -> Void)?
+
     /// 导航栏内容高度（不含安全区域）
     private let contentHeight: CGFloat = 44
-    
+
     private lazy var backgroundView: UIView = {
         let view = UIView()
         view.backgroundColor = .systemBackground
@@ -257,7 +260,9 @@ class ProfileHeaderBar: UIView {
         addSubview(backButton)
         addSubview(titleLabel)
         addSubview(moreButton)
-        
+
+        backButton.addTarget(self, action: #selector(handleBackButtonTapped), for: .touchUpInside)
+
         // 背景覆盖整个区域（包括状态栏）
         backgroundView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
@@ -289,5 +294,9 @@ class ProfileHeaderBar: UIView {
     func updateAppearance(progress: CGFloat) {
         backgroundView.alpha = progress
         titleLabel.alpha = progress
+    }
+
+    @objc private func handleBackButtonTapped() {
+        onBackButtonTapped?()
     }
 }

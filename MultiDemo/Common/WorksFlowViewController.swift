@@ -43,6 +43,7 @@ class WorksFlowViewController: UIViewController, NestedScrollChildProtocol, View
         
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .systemBackground
+        cv.bounces
         cv.delegate = self
         cv.dataSource = self
         cv.register(WorksCell.self, forCellWithReuseIdentifier: WorksCell.reuseId)

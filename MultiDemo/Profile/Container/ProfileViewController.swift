@@ -61,11 +61,20 @@ class ProfileViewController: UIViewController {
     private var profileHeaderTopConstraint: Constraint?
     private var isFirstLayout = true
     
+    /// 右滑关闭手势识别器
+    private var dismissPanGestureRecognizer: UIPanGestureRecognizer?
+    
+    /// 交互式转场控制器（用于手势驱动的 dismiss）
+    private var dismissInteractiveTransition: SlideInteractiveTransition?
+    
     // MARK: - UI Components
     
     /// 顶部导航栏
     private lazy var headerBar: ProfileHeaderBar = {
         let bar = ProfileHeaderBar()
+        bar.onBackButtonTapped = { [weak self] in
+            self?.dismiss(animated: true)
+        }
         return bar
     }()
     
@@ -103,6 +112,7 @@ class ProfileViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        setupDismissGesture()
         reloadAssetFlows()
     }
     
@@ -170,6 +180,31 @@ class ProfileViewController: UIViewController {
         }
     }
     
+    private func setupDismissGesture() {
+        // 设置转场代理以支持交互式 dismiss
+        transitioningDelegate = self
+
+        // 添加右滑关闭手势（任意位置向右滑动）
+        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handleDismissPanGesture(_:)))
+        panGesture.delegate = self
+        view.addGestureRecognizer(panGesture)
+        dismissPanGestureRecognizer = panGesture
+    }
+
+    @objc private func handleDismissPanGesture(_ gesture: UIPanGestureRecognizer) {
+        guard gesture.state == .began else { return }
+
+        // 创建交互式转场控制器（它会自动处理 .changed 和 .ended 状态）
+        dismissInteractiveTransition = SlideInteractiveTransition(
+            gestureRecognizer: gesture,
+            direction: .left,
+            onComplete: { [weak self] in
+                self?.dismissInteractiveTransition = nil
+            }
+        )
+        dismiss(animated: true)
+    }
+    
     private func configureStickyContainer() {
         // 先访问 headerWrapper 触发懒加载，确保 profileHeaderView 有 superview
         _ = headerWrapper
@@ -219,22 +254,91 @@ extension ProfileViewController: StickyContainerDataSource {
     func numberOfPages(in container: StickyHeaderContainerView) -> Int {
         return assetFlowConfigs.count
     }
-    
+
     func stickyContainer(_ container: StickyHeaderContainerView, titleForPageAt index: Int) -> String {
         guard index < assetFlowConfigs.count else { return "" }
         return assetFlowConfigs[index].title
     }
-    
+
     func stickyContainer(_ container: StickyHeaderContainerView, pageAt index: Int) -> StickyPageProtocol {
         let page = assetFlowConfigs[index].pageFactory()
-        
+
         // 添加为子控制器
         addChild(page)
         page.didMove(toParent: self)
-        
-        print("[ProfileViewController] 懒加载资产流页面: \(assetFlowConfigs[index].title)")
-        
+
         return page
+    }
+}
+
+// MARK: - UIViewControllerTransitioningDelegate
+extension ProfileViewController: UIViewControllerTransitioningDelegate {
+    func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        return SlideTransitionAnimator(direction: .right, isPresenting: false)
+    }
+    
+    func interactionControllerForDismissal(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
+        return dismissInteractiveTransition
+    }
+}
+
+// MARK: - UIGestureRecognizerDelegate
+/// 手势冲突解决方案
+///
+/// 问题场景：
+/// - ProfileViewController 添加了全局 UIPanGestureRecognizer 用于向右滑动 dismiss
+/// - 内部 StickyHeaderContainerView 包含水平滚动的 pageCollectionView（用于分页切换）
+/// - 两个手势会产生冲突，导致 pageCollectionView 无法正常滑动
+///
+/// 解决方案：
+/// 1. `gestureRecognizerShouldBegin`: 判断是否应该触发 dismiss 手势
+///    - 只响应向右滑动（velocity.x > 0 且水平方向为主）
+///    - 如果触摸点在水平 scrollView 内且 scrollView 可以向右滚动（contentOffset.x > 0），则不触发 dismiss
+///
+/// 2. `shouldRecognizeSimultaneouslyWith`: 允许 dismiss 手势与 scrollView 手势同时识别
+///    - 关键：返回 true 让两个手势共存，避免 dismiss 手势拦截 scrollView 的滑动
+///    - 这样用户在 pageCollectionView 区域滑动时，scrollView 可以正常响应
+///
+extension ProfileViewController: UIGestureRecognizerDelegate {
+
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard gestureRecognizer == dismissPanGestureRecognizer,
+              let panGesture = gestureRecognizer as? UIPanGestureRecognizer else {
+            return true
+        }
+
+        let velocity = panGesture.velocity(in: view)
+
+        // 只响应向右滑动（水平方向为主）
+        guard velocity.x > 0 && abs(velocity.x) > abs(velocity.y) else {
+            return false
+        }
+
+        // 检查触摸点是否在可水平滚动的视图内
+        let location = panGesture.location(in: view)
+        let horizontalScrollViews = stickyContainer.getAllHorizontalScrollViews()
+
+        for scrollView in horizontalScrollViews {
+            let scrollViewFrame = scrollView.convert(scrollView.bounds, to: view)
+            if scrollViewFrame.contains(location) {
+                // 如果 scrollView 不在最左边（contentOffset.x > 0），让 scrollView 优先处理
+                if scrollView.contentOffset.x > 0 {
+                    return false
+                }
+            }
+        }
+
+        return true
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        // 关键：允许 dismiss 手势与 scrollView 手势同时识别
+        // 这样 scrollView 可以正常处理滑动，不会被 dismiss 手势拦截
+        if gestureRecognizer == dismissPanGestureRecognizer,
+           otherGestureRecognizer.view is UIScrollView {
+            return true
+        }
+        return false
     }
 }
 

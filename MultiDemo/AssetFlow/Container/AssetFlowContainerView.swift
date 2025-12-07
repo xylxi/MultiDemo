@@ -44,6 +44,7 @@ class AssetFlowContainerView: UIView {
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .systemBackground
         cv.isPagingEnabled = true
+        cv.bounces = false
         cv.showsHorizontalScrollIndicator = false
         cv.delegate = self
         cv.dataSource = self

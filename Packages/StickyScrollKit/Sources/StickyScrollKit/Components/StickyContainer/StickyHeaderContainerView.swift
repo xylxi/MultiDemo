@@ -188,6 +188,7 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .systemBackground
         cv.isPagingEnabled = true
+        cv.bounces = false
         cv.showsHorizontalScrollIndicator = false
         cv.delegate = self
         // 使用 DiffableDataSource，不再设置 dataSource = self

@@ -55,6 +55,7 @@ class InteractionViewController: UIViewController, AssetFlowPageProtocol, Nested
         cv.backgroundColor = .systemBackground
         cv.delegate = self
         cv.dataSource = self
+        cv.bounces = false
         cv.register(InteractionCell.self, forCellWithReuseIdentifier: InteractionCell.reuseId)
         cv.alwaysBounceVertical = true
         cv.contentInsetAdjustmentBehavior = .never
