@@ -179,7 +179,20 @@ class ProfileViewController: UIViewController {
             make.top.equalToSuperview().offset(headerBarHeight)
         }
         
+        let titles = assetFlowConfigs.map { $0.title }
+        
+        let customMenu: StickyMenuViewProtocol?
+        if !titles.isEmpty {
+            let view = CollectionMenuView()
+            view.menuHeight = menuHeight
+            view.configure(titles: titles)
+            customMenu = view
+        } else {
+            customMenu = nil
+        }
+        
         let config = StickyContainerConfig(
+            menuEnabled: customMenu != nil,
             menuHeight: menuHeight,
             stickyOffset: headerBarHeight,
             initialPageIndex: max(0, min(defaultAssetFlowIndex, assetFlowConfigs.count - 1)),
@@ -189,7 +202,7 @@ class ProfileViewController: UIViewController {
         stickyContainer.configure(
             with: config,
             headerView: headerWrapper,
-            menuView: nil  // 使用默认菜单
+            menuView: customMenu
         )
     }
     

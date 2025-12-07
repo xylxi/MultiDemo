@@ -91,12 +91,25 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
     public var menuView: StickyMenuViewProtocol? {
         didSet {
             oldValue?.removeFromSuperview()
+            
+            guard config.menuEnabled else {
+                // 菜单被禁用时，清理引用并确保布局不预留菜单空间
+                if menuView != nil {
+                    menuView = nil
+                } else {
+                    updatePageCollectionConstraintsForMenu()
+                }
+                return
+            }
+            
             if let menu = menuView {
                 contentView.addSubview(menu)
                 setupMenuConstraints()
                 menu.onItemSelected = { [weak self] index in
                     self?.scrollToPage(at: index, animated: true)
                 }
+            } else {
+                updatePageCollectionConstraintsForMenu()
             }
         }
     }
@@ -115,6 +128,9 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
     private var previousPageIndex: Int = 0
     private var isTransitioning = false
     private var hasPerformedInitialScroll = false
+    private var isMenuVisible: Bool {
+        return config.menuEnabled && menuView != nil
+    }
     
     private var headerHeightConstraint: Constraint?
     private var pageContainerHeightConstraint: Constraint?
@@ -205,7 +221,7 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
     /// - Parameters:
     ///   - config: 配置参数
     ///   - headerView: 头部视图
-    ///   - menuView: 菜单视图（可选，不传则使用默认 MenuView）
+    ///   - menuView: 菜单视图（可选，config.menuEnabled = false 时忽略；nil 时默认提供内置菜单，也可在外部自行赋值）
     public func configure(
         with config: StickyContainerConfig,
         headerView: UIView,
@@ -214,14 +230,8 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
         self.config = config
         self.headerView = headerView
         
-        // 使用传入的菜单或创建默认菜单
-        if let menu = menuView {
-            self.menuView = menu
-        } else {
-            let defaultMenu = DefaultStickyMenuView()
-            defaultMenu.menuHeight = config.menuHeight
-            self.menuView = defaultMenu
-        }
+        // 仅在开启菜单时接入外部传入的菜单；可为 nil 以禁用菜单
+        self.menuView = config.menuEnabled ? menuView : nil
         
         _mainScrollView.bounces = config.bounces
         currentPageIndex = config.initialPageIndex
@@ -244,18 +254,8 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
         currentPageIndex = validIndex
         previousPageIndex = validIndex
         
-        // 配置菜单
-        var titles: [String] = []
-        for i in 0..<pageCount {
-            titles.append(dataSource.stickyContainer(self, titleForPageAt: i))
-        }
-        
-        if let defaultMenu = menuView as? DefaultStickyMenuView {
-            let menuItems = titles.map { MenuItem(title: $0) }
-            defaultMenu.configure(with: menuItems)
-        }
-        
-        if pageCount > 0 {
+        // 菜单同步选中（若存在外部菜单）
+        if isMenuVisible, pageCount > 0 {
             menuView?.selectItem(at: validIndex, animated: false)
         }
         
@@ -400,8 +400,7 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
         }
         
         pageCollectionView.snp.makeConstraints { make in
-            make.top.equalToSuperview().offset(config.menuHeight)
-            make.leading.trailing.bottom.equalToSuperview()
+            make.top.leading.trailing.bottom.equalToSuperview()
         }
         
         // 设置 scrollManager
@@ -461,14 +460,11 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
             make.height.equalTo(menu.menuHeight)
         }
         
-        pageCollectionView.snp.remakeConstraints { make in
-            make.top.equalTo(menu.snp.bottom)
-            make.leading.trailing.bottom.equalToSuperview()
-        }
+        updatePageCollectionConstraintsForMenu()
     }
     
     private func updateContentSize() {
-        let menuHeight = menuView?.menuHeight ?? config.menuHeight
+        let menuHeight = isMenuVisible ? (menuView?.menuHeight ?? config.menuHeight) : 0
         let contentHeight = bounds.height - config.stickyOffset - menuHeight
         
         if pageContainerHeightConstraint == nil {
@@ -509,11 +505,13 @@ public class StickyHeaderContainerView: UIView, NestedScrollParentProtocol, Nest
         scrollManager.handleParentScroll(scrollView)
         
         // 菜单吸顶
-        updateStickyMenuPosition(offsetY: min(offsetY, scrollableHeaderH))
+        if isMenuVisible {
+            updateStickyMenuPosition(offsetY: min(offsetY, scrollableHeaderH))
+        }
     }
     
     private func updateStickyMenuPosition(offsetY: CGFloat) {
-        guard let menu = menuView else { return }
+        guard isMenuVisible, let menu = menuView else { return }
         // stickyPoint 是实际需要滚动隐藏的高度（不含 stickyOffset）
         let stickyPoint = headerHeight
         
@@ -675,6 +673,21 @@ extension StickyHeaderContainerView: UICollectionViewDelegate, UIScrollViewDeleg
     }
 }
 
+// MARK: - 布局辅助
+private extension StickyHeaderContainerView {
+    /// 根据当前菜单可见性更新分页区域约束
+    func updatePageCollectionConstraintsForMenu() {
+        pageCollectionView.snp.remakeConstraints { make in
+            if isMenuVisible, let menu = menuView {
+                make.top.equalTo(menu.snp.bottom)
+            } else {
+                make.top.equalToSuperview()
+            }
+            make.leading.trailing.bottom.equalToSuperview()
+        }
+    }
+}
+
 // MARK: - UICollectionViewDelegateFlowLayout
 extension StickyHeaderContainerView: UICollectionViewDelegateFlowLayout {
     public func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
@@ -704,58 +717,5 @@ private class StickyPageCell: UICollectionViewCell {
     }
 }
 
-// MARK: - ================== 默认菜单视图 ==================
-
-/// 默认的吸顶菜单视图（包装 MenuView）
-public class DefaultStickyMenuView: UIView, StickyMenuViewProtocol {
-    
-    public var menuHeight: CGFloat = 48 {
-        didSet {
-            snp.updateConstraints { make in
-                make.height.equalTo(menuHeight)
-            }
-        }
-    }
-    
-    public var onItemSelected: ((Int) -> Void)?
-    
-    private lazy var innerMenuView: MenuView = {
-        let menu = MenuView()
-        menu.backgroundColor = .systemBackground
-        menu.delegate = self
-        return menu
-    }()
-    
-    public override init(frame: CGRect) {
-        super.init(frame: frame)
-        setupUI()
-    }
-    
-    public required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    private func setupUI() {
-        backgroundColor = .systemBackground
-        addSubview(innerMenuView)
-        
-        innerMenuView.snp.makeConstraints { make in
-            make.edges.equalToSuperview()
-        }
-    }
-    
-    public func selectItem(at index: Int, animated: Bool) {
-        innerMenuView.selectItem(at: index, animated: animated)
-    }
-    
-    public func configure(with items: [MenuItem]) {
-        innerMenuView.configure(with: items)
-    }
-}
-
-extension DefaultStickyMenuView: MenuViewDelegate {
-    public func menuView(_ menuView: MenuView, didSelectItemAt index: Int) {
-        onItemSelected?(index)
-    }
-}
+// MARK: - ================== 默认菜单视图已移除 ==================
 

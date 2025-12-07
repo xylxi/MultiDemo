@@ -45,18 +45,17 @@ dependencies: [
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │                   Components 层                          │   │
 │  │                                                         │   │
-│  │   ┌─────────────────────┐  ┌─────────────────────────┐  │   │
-│  │   │   StickyContainer   │  │       Menu              │  │   │
-│  │   │                     │  │                         │  │   │
-│  │   │ • StickyHeader-     │  │ • MenuItem              │  │   │
-│  │   │   ContainerView     │  │ • MenuView              │  │   │
-│  │   │ • StickyPageProtocol│  │ • MenuViewDelegate      │  │   │
-│  │   │ • StickyContainer-  │  │                         │  │   │
-│  │   │   DataSource        │  │                         │  │   │
-│  │   │ • StickyContainer-  │  │                         │  │   │
-│  │   │   Delegate          │  │                         │  │   │
-│  │   │ • DefaultStickyMenu │  │                         │  │   │
-│  │   └─────────────────────┘  └─────────────────────────┘  │   │
+│  │   ┌─────────────────────┐                              │   │
+│  │   │   StickyContainer   │                              │   │
+│  │   │                     │                              │   │
+│  │   │ • StickyHeader-     │   外部提供自定义菜单视图，需  │   │
+│  │   │   ContainerView     │   实现 StickyMenuViewProtocol │   │
+│  │   │ • StickyPageProtocol│                              │   │
+│  │   │ • StickyContainer-  │                              │   │
+│  │   │   DataSource        │                              │   │
+│  │   │ • StickyContainer-  │                              │   │
+│  │   │   Delegate          │                              │   │
+│  │   └─────────────────────┘                              │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                              ▲                                  │
 │                              │ 依赖                             │
@@ -98,10 +97,7 @@ dependencies: [
 | `StickyContainerDataSource` | 数据源协议（页面数量、标题、实例） |
 | `StickyContainerDelegate` | 代理协议（页面切换、滚动进度） |
 | `StickyPageProtocol` | 页面协议（获取滚动子视图、生命周期） |
-| `StickyMenuViewProtocol` | 菜单协议（可自定义菜单） |
-| `DefaultStickyMenuView` | 默认菜单实现 |
-| `MenuItem` | 菜单项模型 |
-| `MenuView` | 通用菜单视图 |
+| `StickyMenuViewProtocol` | 菜单协议（外部自定义菜单需实现） |
 
 ---
 

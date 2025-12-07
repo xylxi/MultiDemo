@@ -11,11 +11,6 @@
 /// - `NestedScrollManager`: 嵌套滚动管理器
 /// - `NestedParentScrollView`: 支持手势排除的 ScrollView
 ///
-/// ### Components/Menu - 菜单组件
-/// - `MenuItem`: 菜单项模型
-/// - `MenuView`: 通用菜单视图
-/// - `MenuViewDelegate`: 菜单代理
-///
 /// ### Components/StickyContainer - 吸顶容器
 /// - `StickyHeaderContainerView`: 通用吸顶容器视图
 /// - `StickyContainerConfig`: 容器配置
@@ -23,7 +18,6 @@
 /// - `StickyContainerDelegate`: 代理协议
 /// - `StickyPageProtocol`: 页面协议
 /// - `StickyMenuViewProtocol`: 菜单协议
-/// - `DefaultStickyMenuView`: 默认菜单实现
 ///
 /// ## 使用示例
 ///
@@ -44,11 +38,8 @@
 ///             stickyOffset: view.safeAreaInsets.top + 44
 ///         )
 ///         
-///         stickyContainer.configure(
-///             with: config,
-///             headerView: myHeaderView,
-///             menuView: nil
-///         )
+///         // 传入自定义菜单（实现 StickyMenuViewProtocol），或传 nil 表示无菜单
+///         stickyContainer.configure(with: config, headerView: myHeaderView, menuView: customMenu)
 ///     }
 /// }
 /// ```

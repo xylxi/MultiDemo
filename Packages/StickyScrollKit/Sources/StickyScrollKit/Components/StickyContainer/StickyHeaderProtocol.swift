@@ -104,6 +104,9 @@ public extension StickyContainerDelegate {
 // MARK: - 吸顶容器配置
 /// 吸顶容器的配置参数
 public struct StickyContainerConfig {
+    /// 是否启用菜单区域
+    public var menuEnabled: Bool
+    
     /// 菜单高度
     public var menuHeight: CGFloat
     
@@ -117,11 +120,13 @@ public struct StickyContainerConfig {
     public var bounces: Bool
     
     public init(
+        menuEnabled: Bool = true,
         menuHeight: CGFloat = 48,
         stickyOffset: CGFloat = 0,
         initialPageIndex: Int = 0,
         bounces: Bool = true
     ) {
+        self.menuEnabled = menuEnabled
         self.menuHeight = menuHeight
         self.stickyOffset = stickyOffset
         self.initialPageIndex = initialPageIndex

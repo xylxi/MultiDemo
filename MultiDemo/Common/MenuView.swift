@@ -1,7 +1,7 @@
 import UIKit
 import SnapKit
 
-// MARK: - ================== 菜单组件 ==================
+// MARK: - ================== 菜单组件（应用侧自定义） ==================
 
 // MARK: - 菜单项模型
 public struct MenuItem {
@@ -153,4 +153,3 @@ public class MenuView: UIView {
         }
     }
 }
-
